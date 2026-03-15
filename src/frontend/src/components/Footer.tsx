@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <img
-                src="/assets/uploads/17736178367692251771168483360120-1.jpg"
+                src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1-1.png"
                 alt="Easy Shopping A.R.S"
                 className="h-12 w-auto max-w-[130px] object-contain block rounded-md"
               />
