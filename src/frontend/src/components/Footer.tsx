@@ -1,5 +1,3 @@
-import { Package } from "lucide-react";
-
 export default function Footer() {
   const year = new Date().getFullYear();
   const utm = encodeURIComponent(window.location.hostname);
@@ -10,15 +8,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <div className="font-display font-bold text-white">
-                  Easy Shopping
-                </div>
-                <div className="text-xs text-primary">A.R.S</div>
-              </div>
+              <img
+                src="/assets/uploads/17736178367692251771168483360120-1.jpg"
+                alt="Easy Shopping A.R.S"
+                className="h-12 w-auto max-w-[130px] object-contain block rounded-md"
+              />
             </div>
             <p className="text-sm text-white/60">
               Your trusted online shopping destination. Quality products, fast

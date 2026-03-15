@@ -98,12 +98,12 @@ export default function Header({ onSearch }: HeaderProps) {
         <Link
           to="/"
           data-ocid="nav.link"
-          className="flex items-center gap-2 shrink-0"
+          className="flex items-center shrink-0"
         >
           <img
-            src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1.png"
+            src="/assets/uploads/17736178367692251771168483360120-1.jpg"
             alt="Easy Shopping A.R.S"
-            className="h-12 w-auto object-contain"
+            className="h-14 w-auto max-w-[160px] object-contain block rounded-md"
           />
         </Link>
 
