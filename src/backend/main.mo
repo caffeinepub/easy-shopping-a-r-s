@@ -9,18 +9,15 @@ import Text "mo:core/Text";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
-import Storage "blob-storage/Storage";
+
 import MixinStorage "blob-storage/Mixin";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
 actor {
-  // Initialize the access control system.
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   include MixinStorage();
-
-  // TYPES
 
   type Product = {
     id : Nat;
@@ -72,15 +69,12 @@ actor {
     createdAt : Int;
   };
 
-  // V1 type preserved for stable storage compatibility with previous deployment.
-  // Must keep this name and shape so Motoko can deserialise the existing stable map.
   type UserProfileV1 = {
     name : Text;
     email : Text;
     address : Text;
   };
 
-  // New profile type that includes phone.
   public type UserProfile = {
     name : Text;
     email : Text;
@@ -88,28 +82,25 @@ actor {
     phone : Text;
   };
 
-  // STATE
-
   var nextProductId = 1;
   var nextOrderId = 1;
 
   let products = Map.empty<Nat, Product>();
   let carts = Map.empty<Principal, List.List<CartItem>>();
   let orders = Map.empty<Nat, Order>();
-
-  // userProfiles keeps the OLD V1 type so the stable data from the previous
-  // deployment can be read without a compatibility error.
   let userProfiles = Map.empty<Principal, UserProfileV1>();
-
-  // New map for profiles that include phone. Fresh stable variable.
   let userProfilesV2 = Map.empty<Principal, UserProfile>();
+
+  // Require a logged-in (non-anonymous) caller for buyer operations
+  func requireLoggedIn(caller : Principal) {
+    if (caller.isAnonymous()) {
+      Runtime.trap("You must be logged in to perform this action");
+    };
+  };
 
   // USER PROFILE MANAGEMENT
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
-    };
-    // Check new map first; fall back to migrating a V1 entry on the fly.
+    requireLoggedIn(caller);
     switch (userProfilesV2.get(caller)) {
       case (?profile) { ?profile };
       case (null) {
@@ -141,9 +132,7 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
-    };
+    requireLoggedIn(caller);
     userProfilesV2.add(caller, profile);
   };
 
@@ -164,8 +153,6 @@ actor {
     };
     products.values().toArray();
   };
-
-  // PRODUCTS
 
   public shared ({ caller }) func createProduct({ caller : Principal }, newProduct : ProductInput) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
@@ -242,12 +229,8 @@ actor {
     products.add(id, updatedProduct);
   };
 
-  // CART
-
   public shared ({ caller }) func addToCart(productId : Nat, quantity : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can add to cart");
-    };
+    requireLoggedIn(caller);
 
     if (quantity == 0) { Runtime.trap("Quantity must be greater than 0") };
 
@@ -287,9 +270,7 @@ actor {
   };
 
   public shared ({ caller }) func updateCartItem(productId : Nat, newQuantity : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update cart");
-    };
+    requireLoggedIn(caller);
 
     if (newQuantity == 0) { Runtime.trap("Quantity must be greater than 0") };
 
@@ -323,9 +304,7 @@ actor {
   };
 
   public shared ({ caller }) func removeCartItem(productId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can remove from cart");
-    };
+    requireLoggedIn(caller);
 
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
@@ -343,28 +322,20 @@ actor {
   };
 
   public shared ({ caller }) func clearCart() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can clear cart");
-    };
+    requireLoggedIn(caller);
     carts.add(caller, List.empty<CartItem>());
   };
 
   public query ({ caller }) func getCart() : async [CartItem] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view cart");
-    };
+    requireLoggedIn(caller);
     switch (carts.get(caller)) {
       case (null) { [] };
       case (?cart) { cart.toArray() };
     };
   };
 
-  // ORDERS
-
   public shared ({ caller }) func placeOrder() : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can place orders");
-    };
+    requireLoggedIn(caller);
 
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
@@ -373,7 +344,6 @@ actor {
 
     if (cart.size() == 0) { Runtime.trap("Cart is empty") };
 
-    // Validate all cart items
     for (item in cart.values()) {
       let product = switch (products.get(item.productId)) {
         case (null) { Runtime.trap("Product not found: " # item.productId.toText()) };
@@ -421,7 +391,6 @@ actor {
     orders.add(nextOrderId, order);
     nextOrderId += 1;
 
-    // Deduct stock for each item
     for (item in validatedItems.values()) {
       let product = switch (products.get(item.productId)) {
         case (null) { Runtime.trap("Product not found: " # item.productId.toText()) };
@@ -432,7 +401,6 @@ actor {
       products.add(item.productId, updatedProduct);
     };
 
-    // Clear cart after successful order
     carts.add(caller, List.empty<CartItem>());
 
     order.id;
@@ -452,9 +420,7 @@ actor {
   };
 
   public query ({ caller }) func getMyOrders() : async [Order] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view their orders");
-    };
+    requireLoggedIn(caller);
     orders.values().toArray().filter(func(o) { o.buyerId == caller });
   };
 
@@ -464,8 +430,6 @@ actor {
     };
     orders.values().toArray();
   };
-
-  // ANALYTICS
 
   public shared ({ caller }) func getInsights({ caller : Principal }) : async {
     totalOrders : Nat;
