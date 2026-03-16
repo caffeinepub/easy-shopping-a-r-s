@@ -72,10 +72,20 @@ actor {
     createdAt : Int;
   };
 
+  // V1 type preserved for stable storage compatibility with previous deployment.
+  // Must keep this name and shape so Motoko can deserialise the existing stable map.
+  type UserProfileV1 = {
+    name : Text;
+    email : Text;
+    address : Text;
+  };
+
+  // New profile type that includes phone.
   public type UserProfile = {
     name : Text;
     email : Text;
     address : Text;
+    phone : Text;
   };
 
   // STATE
@@ -86,28 +96,55 @@ actor {
   let products = Map.empty<Nat, Product>();
   let carts = Map.empty<Principal, List.List<CartItem>>();
   let orders = Map.empty<Nat, Order>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
+
+  // userProfiles keeps the OLD V1 type so the stable data from the previous
+  // deployment can be read without a compatibility error.
+  let userProfiles = Map.empty<Principal, UserProfileV1>();
+
+  // New map for profiles that include phone. Fresh stable variable.
+  let userProfilesV2 = Map.empty<Principal, UserProfile>();
 
   // USER PROFILE MANAGEMENT
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view profiles");
     };
-    userProfiles.get(caller);
+    // Check new map first; fall back to migrating a V1 entry on the fly.
+    switch (userProfilesV2.get(caller)) {
+      case (?profile) { ?profile };
+      case (null) {
+        switch (userProfiles.get(caller)) {
+          case (null) { null };
+          case (?v1) {
+            ?{ name = v1.name; email = v1.email; address = v1.address; phone = "" };
+          };
+        };
+      };
+    };
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-    userProfiles.get(user);
+    switch (userProfilesV2.get(user)) {
+      case (?profile) { ?profile };
+      case (null) {
+        switch (userProfiles.get(user)) {
+          case (null) { null };
+          case (?v1) {
+            ?{ name = v1.name; email = v1.email; address = v1.address; phone = "" };
+          };
+        };
+      };
+    };
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
-    userProfiles.add(caller, profile);
+    userProfilesV2.add(caller, profile);
   };
 
   public query ({ caller }) func getProduct(productId : Nat) : async Product {

@@ -12,6 +12,7 @@ import CartPage from "./pages/CartPage";
 import HomePage from "./pages/HomePage";
 import OrdersPage from "./pages/OrdersPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import ProfilePage from "./pages/ProfilePage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminProducts from "./pages/admin/AdminProducts";
@@ -86,6 +87,12 @@ const ordersRoute = createRoute({
   component: OrdersPage,
 });
 
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  component: ProfilePage,
+});
+
 const adminLoginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin-login",
@@ -127,6 +134,7 @@ const routeTree = rootRoute.addChildren([
   productRoute,
   cartRoute,
   ordersRoute,
+  profileRoute,
   adminLoginRoute,
   adminRoute,
   adminProductsRoute,

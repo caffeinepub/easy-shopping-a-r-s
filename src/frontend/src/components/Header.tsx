@@ -15,6 +15,7 @@ import {
   Search,
   ShoppingCart,
   User,
+  UserCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -164,6 +165,12 @@ export default function Header({ onSearch }: HeaderProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent data-ocid="nav.dropdown_menu" align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" data-ocid="nav.profile.link">
+                      <UserCircle className="w-4 h-4 mr-2" />
+                      My Profile
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/orders" data-ocid="nav.orders.link">
                       My Orders

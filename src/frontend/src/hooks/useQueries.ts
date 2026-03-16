@@ -1,11 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CartItem, Order, Product } from "../backend";
+import type { CartItem, Order, Product, UserProfile } from "../backend";
 import { UserRole } from "../backend";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
-export type { Product, CartItem, Order };
+export type { Product, CartItem, Order, UserProfile };
 export { UserRole };
+
+// Extended profile type that includes phone (supported by backend but not in generated types)
+export interface BuyerProfile extends UserProfile {
+  phone: string;
+}
 
 export function useUserRole() {
   const { actor, isFetching } = useActor();
@@ -106,6 +111,32 @@ export function useInsights() {
       return actor.getInsights({ caller });
     },
     enabled: !!actor && !isFetching && !!identity,
+  });
+}
+
+export function useUserProfile() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  return useQuery<BuyerProfile | null>({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      if (!actor) return null;
+      const result = await actor.getCallerUserProfile();
+      return result as BuyerProfile | null;
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
+}
+
+export function useSaveUserProfile() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (profile: BuyerProfile) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.saveCallerUserProfile(profile as any);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["userProfile"] }),
   });
 }
 
