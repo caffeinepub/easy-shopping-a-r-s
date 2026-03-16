@@ -147,14 +147,14 @@ actor {
     products.values().toArray().filter(func(p) { p.isActive });
   };
 
-  public shared ({ caller }) func getAllProductsAdmin({ caller : Principal }) : async [Product] {
+  public shared ({ caller }) func getAllProductsAdmin() : async [Product] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can get all products");
     };
     products.values().toArray();
   };
 
-  public shared ({ caller }) func createProduct({ caller : Principal }, newProduct : ProductInput) : async Nat {
+  public shared ({ caller }) func createProduct(newProduct : ProductInput) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can create products");
     };
@@ -177,7 +177,7 @@ actor {
     product.id;
   };
 
-  public shared ({ caller }) func updateProduct({ caller : Principal }, productUpdate : ProductUpdateInput) : async () {
+  public shared ({ caller }) func updateProduct(productUpdate : ProductUpdateInput) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can update products");
     };
@@ -201,7 +201,7 @@ actor {
     products.add(productUpdate.id, updatedProduct);
   };
 
-  public shared ({ caller }) func toggleProductActive({ caller : Principal }, id : Nat, isActive : Bool) : async () {
+  public shared ({ caller }) func toggleProductActive(id : Nat, isActive : Bool) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can change product status");
     };
@@ -215,7 +215,7 @@ actor {
     products.add(id, updatedProduct);
   };
 
-  public shared ({ caller }) func updateProductStock({ caller : Principal }, id : Nat, newQty : Nat) : async () {
+  public shared ({ caller }) func updateProductStock(id : Nat, newQty : Nat) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can update product stock");
     };
@@ -406,7 +406,7 @@ actor {
     order.id;
   };
 
-  public shared ({ caller }) func updateOrderStatus({ caller : Principal }, orderId : Nat, newStatus : Text) : async () {
+  public shared ({ caller }) func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can update order status");
     };
@@ -424,14 +424,14 @@ actor {
     orders.values().toArray().filter(func(o) { o.buyerId == caller });
   };
 
-  public shared ({ caller }) func getAllOrders({ caller : Principal }) : async [Order] {
+  public shared ({ caller }) func getAllOrders() : async [Order] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Only admins can get all orders");
     };
     orders.values().toArray();
   };
 
-  public shared ({ caller }) func getInsights({ caller : Principal }) : async {
+  public shared ({ caller }) func getInsights() : async {
     totalOrders : Nat;
     pendingOrders : Nat;
     processingOrders : Nat;

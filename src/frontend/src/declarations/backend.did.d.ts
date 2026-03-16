@@ -58,6 +58,7 @@ export interface UserProfile {
   'name' : string,
   'email' : string,
   'address' : string,
+  'phone' : string,
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |

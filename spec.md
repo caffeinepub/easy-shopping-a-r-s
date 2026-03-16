@@ -1,28 +1,24 @@
 # Easy Shopping A.R.S
 
 ## Current State
-The app has buyer accounts with Internet Identity-based auth. The backend has a `UserProfile` type with `name`, `email`, and `address` fields, and save/get profile functions. The frontend does not yet have a profile management UI.
+Admin product creation, update, toggle, and order management fail because the frontend mutations check for `identity` (Internet Identity) which was removed in favor of username/password login. Since `identity` is always null, all admin backend calls throw "Not connected" before reaching the backend.
+
+Additionally, backend admin functions take an explicit `{ caller: Principal }` parameter which the frontend passes from `identity.getPrincipal()` — also broken for the same reason.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `phone` field to `UserProfile` in backend (Nepal mobile number, 10 digits starting with 98/97/96)
-- A "My Profile" page in the frontend where buyers can view and save: Name, Address, Phone number
-- Route `/profile` in the frontend router
-- Link to profile from header (for logged-in buyers)
-- Nepal phone number validation on the frontend (must start with 98, 97, or 96 and be exactly 10 digits)
+- Nothing new
 
 ### Modify
-- `UserProfile` type: add `phone: Text` field
-- `saveCallerUserProfile` accepts updated profile with phone
-- Header component: add "My Profile" nav link for buyers
+- `main.mo`: Remove the redundant explicit `{ caller : Principal }` parameter from all admin functions; use the built-in `caller` from `shared { caller }` context for permission checks
+- `backend.d.ts`: Update signatures to match new Motoko signatures (no extra caller arg)
+- `useQueries.ts`: Remove `identity` requirement and `{ caller }` argument passing from all admin mutations
 
 ### Remove
 - Nothing
 
 ## Implementation Plan
-1. Update `UserProfile` type in `main.mo` to include `phone: Text`
-2. Create `ProfilePage.tsx` with form fields: Name, Address, Phone (Nepal validation)
-3. Add `/profile` route in `App.tsx`
-4. Add profile link in `Header.tsx` for buyers
-5. Add `useUserProfile` and `useSaveUserProfile` hooks in `useQueries.ts`
+1. Update `main.mo` — remove `{ caller : Principal }` param from `createProduct`, `updateProduct`, `toggleProductActive`, `updateProductStock`, `getAllProductsAdmin`, `getAllOrders`, `updateOrderStatus`, `getInsights`
+2. Update `backend.d.ts` — remove the `arg0: { caller: Principal }` from those function signatures
+3. Update `useQueries.ts` — remove `identity` checks and `{ caller }` passing from admin mutations

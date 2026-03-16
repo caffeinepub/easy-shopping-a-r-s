@@ -165,22 +165,14 @@ export interface backendInterface {
     addToCart(productId: bigint, quantity: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     clearCart(): Promise<void>;
-    createProduct(arg0: {
-        caller: Principal;
-    }, newProduct: ProductInput): Promise<bigint>;
+    createProduct(newProduct: ProductInput): Promise<bigint>;
     getActiveProducts(): Promise<Array<Product>>;
-    getAllOrders(arg0: {
-        caller: Principal;
-    }): Promise<Array<Order>>;
-    getAllProductsAdmin(arg0: {
-        caller: Principal;
-    }): Promise<Array<Product>>;
+    getAllOrders(): Promise<Array<Order>>;
+    getAllProductsAdmin(): Promise<Array<Product>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCart(): Promise<Array<CartItem>>;
-    getInsights(arg0: {
-        caller: Principal;
-    }): Promise<{
+    getInsights(): Promise<{
         cancelledOrders: bigint;
         totalOrders: bigint;
         pendingOrders: bigint;
@@ -194,19 +186,11 @@ export interface backendInterface {
     placeOrder(): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    toggleProductActive(arg0: {
-        caller: Principal;
-    }, id: bigint, isActive: boolean): Promise<void>;
+    toggleProductActive(id: bigint, isActive: boolean): Promise<void>;
     updateCartItem(productId: bigint, newQuantity: bigint): Promise<void>;
-    updateOrderStatus(arg0: {
-        caller: Principal;
-    }, orderId: bigint, newStatus: string): Promise<void>;
-    updateProduct(arg0: {
-        caller: Principal;
-    }, productUpdate: ProductUpdateInput): Promise<void>;
-    updateProductStock(arg0: {
-        caller: Principal;
-    }, id: bigint, newQty: bigint): Promise<void>;
+    updateOrderStatus(orderId: bigint, newStatus: string): Promise<void>;
+    updateProduct(productUpdate: ProductUpdateInput): Promise<void>;
+    updateProductStock(id: bigint, newQty: bigint): Promise<void>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -351,19 +335,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createProduct(arg0: {
-        caller: Principal;
-    }, arg1: ProductInput): Promise<bigint> {
+    async createProduct(arg0: ProductInput): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.createProduct(arg0, arg1);
+                const result = await this.actor.createProduct(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.createProduct(arg0, arg1);
+            const result = await this.actor.createProduct(arg0);
             return result;
         }
     }
@@ -381,35 +363,31 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getAllOrders(arg0: {
-        caller: Principal;
-    }): Promise<Array<Order>> {
+    async getAllOrders(): Promise<Array<Order>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAllOrders(arg0);
+                const result = await this.actor.getAllOrders();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAllOrders(arg0);
+            const result = await this.actor.getAllOrders();
             return result;
         }
     }
-    async getAllProductsAdmin(arg0: {
-        caller: Principal;
-    }): Promise<Array<Product>> {
+    async getAllProductsAdmin(): Promise<Array<Product>> {
         if (this.processError) {
             try {
-                const result = await this.actor.getAllProductsAdmin(arg0);
+                const result = await this.actor.getAllProductsAdmin();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getAllProductsAdmin(arg0);
+            const result = await this.actor.getAllProductsAdmin();
             return result;
         }
     }
@@ -455,9 +433,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getInsights(arg0: {
-        caller: Principal;
-    }): Promise<{
+    async getInsights(): Promise<{
         cancelledOrders: bigint;
         totalOrders: bigint;
         pendingOrders: bigint;
@@ -466,14 +442,14 @@ export class Backend implements backendInterface {
     }> {
         if (this.processError) {
             try {
-                const result = await this.actor.getInsights(arg0);
+                const result = await this.actor.getInsights();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.getInsights(arg0);
+            const result = await this.actor.getInsights();
             return result;
         }
     }
@@ -575,19 +551,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async toggleProductActive(arg0: {
-        caller: Principal;
-    }, arg1: bigint, arg2: boolean): Promise<void> {
+    async toggleProductActive(arg0: bigint, arg1: boolean): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.toggleProductActive(arg0, arg1, arg2);
+                const result = await this.actor.toggleProductActive(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.toggleProductActive(arg0, arg1, arg2);
+            const result = await this.actor.toggleProductActive(arg0, arg1);
             return result;
         }
     }
@@ -605,51 +579,45 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateOrderStatus(arg0: {
-        caller: Principal;
-    }, arg1: bigint, arg2: string): Promise<void> {
+    async updateOrderStatus(arg0: bigint, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateOrderStatus(arg0, arg1, arg2);
+                const result = await this.actor.updateOrderStatus(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateOrderStatus(arg0, arg1, arg2);
+            const result = await this.actor.updateOrderStatus(arg0, arg1);
             return result;
         }
     }
-    async updateProduct(arg0: {
-        caller: Principal;
-    }, arg1: ProductUpdateInput): Promise<void> {
+    async updateProduct(arg0: ProductUpdateInput): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateProduct(arg0, arg1);
+                const result = await this.actor.updateProduct(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateProduct(arg0, arg1);
+            const result = await this.actor.updateProduct(arg0);
             return result;
         }
     }
-    async updateProductStock(arg0: {
-        caller: Principal;
-    }, arg1: bigint, arg2: bigint): Promise<void> {
+    async updateProductStock(arg0: bigint, arg1: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateProductStock(arg0, arg1, arg2);
+                const result = await this.actor.updateProductStock(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateProductStock(arg0, arg1, arg2);
+            const result = await this.actor.updateProductStock(arg0, arg1);
             return result;
         }
     }

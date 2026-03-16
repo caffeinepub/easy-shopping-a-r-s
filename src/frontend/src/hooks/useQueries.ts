@@ -88,29 +88,25 @@ export function useMyOrders() {
 
 export function useAllOrders() {
   const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
   return useQuery<Order[]>({
     queryKey: ["allOrders"],
     queryFn: async () => {
-      if (!actor || !identity) return [];
-      const caller = identity.getPrincipal();
-      return actor.getAllOrders({ caller });
+      if (!actor) return [];
+      return actor.getAllOrders();
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useInsights() {
   const { actor, isFetching } = useActor();
-  const { identity } = useInternetIdentity();
   return useQuery({
     queryKey: ["insights"],
     queryFn: async () => {
-      if (!actor || !identity) return null;
-      const caller = identity.getPrincipal();
-      return actor.getInsights({ caller });
+      if (!actor) return null;
+      return actor.getInsights();
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
   });
 }
 
@@ -211,7 +207,6 @@ export function usePlaceOrder() {
 
 export function useCreateProduct() {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -223,20 +218,16 @@ export function useCreateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      if (!actor || !identity) throw new Error("Not connected");
-      const caller = identity.getPrincipal();
-      return actor.createProduct(
-        { caller },
-        {
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          discountPercent: data.discountPercent,
-          category: data.category,
-          imageId: data.imageId,
-          stockQty: data.stockQty,
-        },
-      );
+      if (!actor) throw new Error("Not connected");
+      return actor.createProduct({
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        discountPercent: data.discountPercent,
+        category: data.category,
+        imageId: data.imageId,
+        stockQty: data.stockQty,
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["activeProducts"] }),
   });
@@ -244,7 +235,6 @@ export function useCreateProduct() {
 
 export function useUpdateProduct() {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -257,21 +247,17 @@ export function useUpdateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      if (!actor || !identity) throw new Error("Not connected");
-      const caller = identity.getPrincipal();
-      return actor.updateProduct(
-        { caller },
-        {
-          id: data.id,
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          discountPercent: data.discountPercent,
-          category: data.category,
-          imageId: data.imageId,
-          stockQty: data.stockQty,
-        },
-      );
+      if (!actor) throw new Error("Not connected");
+      return actor.updateProduct({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        discountPercent: data.discountPercent,
+        category: data.category,
+        imageId: data.imageId,
+        stockQty: data.stockQty,
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["activeProducts"] }),
   });
@@ -279,13 +265,11 @@ export function useUpdateProduct() {
 
 export function useToggleProductActive() {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, isActive }: { id: bigint; isActive: boolean }) => {
-      if (!actor || !identity) throw new Error("Not connected");
-      const caller = identity.getPrincipal();
-      return actor.toggleProductActive({ caller }, id, isActive);
+      if (!actor) throw new Error("Not connected");
+      return actor.toggleProductActive(id, isActive);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["activeProducts"] }),
   });
@@ -293,16 +277,14 @@ export function useToggleProductActive() {
 
 export function useUpdateOrderStatus() {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
       orderId,
       status,
     }: { orderId: bigint; status: string }) => {
-      if (!actor || !identity) throw new Error("Not connected");
-      const caller = identity.getPrincipal();
-      return actor.updateOrderStatus({ caller }, orderId, status);
+      if (!actor) throw new Error("Not connected");
+      return actor.updateOrderStatus(orderId, status);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["allOrders"] }),
   });

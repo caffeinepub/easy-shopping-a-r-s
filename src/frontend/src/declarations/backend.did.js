@@ -62,6 +62,7 @@ export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'email' : IDL.Text,
   'address' : IDL.Text,
+  'phone' : IDL.Text,
 });
 export const ProductUpdateInput = IDL.Record({
   'id' : IDL.Nat,
@@ -228,6 +229,7 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'email' : IDL.Text,
     'address' : IDL.Text,
+    'phone' : IDL.Text,
   });
   const ProductUpdateInput = IDL.Record({
     'id' : IDL.Nat,
