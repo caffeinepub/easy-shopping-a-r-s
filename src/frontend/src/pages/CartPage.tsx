@@ -1,9 +1,27 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Banknote,
+  CreditCard,
+  Loader2,
+  Minus,
+  Plus,
+  QrCode,
+  ShoppingBag,
+  Trash2,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
@@ -11,19 +29,26 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useActiveProducts,
   useCart,
+  usePaymentQRs,
   usePlaceOrder,
   useRemoveCartItem,
   useUpdateCartItem,
 } from "../hooks/useQueries";
+
+type PaymentMethod = "esewa" | "bank" | "cod" | null;
 
 export default function CartPage() {
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
   const { data: cart, isLoading } = useCart();
   const { data: products } = useActiveProducts();
+  const { data: paymentQRs } = usePaymentQRs();
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveCartItem();
   const placeOrder = usePlaceOrder();
+
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   if (!identity) {
     navigate({ to: "/" });
@@ -69,16 +94,47 @@ export default function CartPage() {
     }
   };
 
-  const handlePlaceOrder = async () => {
+  const handleConfirmOrder = async () => {
     if (!cart || cart.length === 0) return;
     try {
       const orderId = await placeOrder.mutateAsync();
       toast.success(`Order #${orderId} placed successfully!`);
+      setQrModalOpen(false);
       navigate({ to: "/orders" });
     } catch {
       toast.error("Failed to place order");
     }
   };
+
+  const handlePaymentSelect = (method: PaymentMethod) => {
+    setSelectedPayment(method);
+  };
+
+  const handleProceed = async () => {
+    if (!selectedPayment) {
+      toast.error("Please select a payment method");
+      return;
+    }
+    if (selectedPayment === "cod") {
+      await handleConfirmOrder();
+    } else {
+      setQrModalOpen(true);
+    }
+  };
+
+  const activeQrImage =
+    selectedPayment === "esewa"
+      ? paymentQRs?.esewaQrImageId
+      : selectedPayment === "bank"
+        ? paymentQRs?.bankQrImageId
+        : "";
+
+  const paymentLabel =
+    selectedPayment === "esewa"
+      ? "eSewa"
+      : selectedPayment === "bank"
+        ? "Bank Transfer"
+        : "";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -125,6 +181,7 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-8">
+            {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               <AnimatePresence>
                 {cartWithProducts.map(({ item, product }, idx) => (
@@ -193,7 +250,7 @@ export default function CartPage() {
                         </div>
 
                         <span className="font-bold text-primary text-sm">
-                          PKR {(() => {
+                          NPR {(() => {
                             const p = Number(product?.price ?? 0);
                             const d = Number(product?.discountPercent ?? 0);
                             const fp = d > 0 ? p * (1 - d / 100) : p;
@@ -218,37 +275,144 @@ export default function CartPage() {
               </AnimatePresence>
             </div>
 
+            {/* Order Summary + Payment */}
             <div>
-              <div className="bg-white rounded-xl p-6 shadow-card sticky top-24">
-                <h2 className="font-display text-xl font-bold mb-4">
-                  Order Summary
-                </h2>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>PKR {subtotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Delivery</span>
-                    <span className="text-green-600">Free</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-bold text-base">
-                    <span>Total</span>
-                    <span className="text-primary">
-                      PKR {subtotal.toLocaleString()}
-                    </span>
+              <div className="bg-white rounded-xl p-6 shadow-card sticky top-24 space-y-6">
+                {/* Summary */}
+                <div>
+                  <h2 className="font-display text-xl font-bold mb-4">
+                    Order Summary
+                  </h2>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>NPR {subtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivery</span>
+                      <span className="text-green-600">Free</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold text-base">
+                      <span>Total</span>
+                      <span className="text-primary">
+                        NPR {subtotal.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Payment Method Selection */}
+                <div>
+                  <h3 className="font-semibold text-sm mb-3">
+                    Select Payment Method
+                  </h3>
+                  <div className="space-y-2">
+                    {/* eSewa */}
+                    <button
+                      type="button"
+                      data-ocid="cart.toggle"
+                      onClick={() => handlePaymentSelect("esewa")}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                        selectedPayment === "esewa"
+                          ? "border-green-500 bg-green-50"
+                          : "border-border hover:border-green-300 hover:bg-green-50/50"
+                      }`}
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
+                        <span className="text-white font-bold text-xs">eS</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-green-800">
+                          eSewa
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Scan QR to pay
+                        </div>
+                      </div>
+                      {selectedPayment === "esewa" && (
+                        <div className="w-4 h-4 rounded-full bg-green-500 shrink-0" />
+                      )}
+                    </button>
+
+                    {/* Bank Transfer */}
+                    <button
+                      type="button"
+                      data-ocid="cart.toggle"
+                      onClick={() => handlePaymentSelect("bank")}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                        selectedPayment === "bank"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-border hover:border-blue-300 hover:bg-blue-50/50"
+                      }`}
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center shrink-0">
+                        <CreditCard className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-blue-800">
+                          Bank Transfer
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Scan QR to transfer
+                        </div>
+                      </div>
+                      {selectedPayment === "bank" && (
+                        <div className="w-4 h-4 rounded-full bg-blue-500 shrink-0" />
+                      )}
+                    </button>
+
+                    {/* Cash on Delivery */}
+                    <button
+                      type="button"
+                      data-ocid="cart.toggle"
+                      onClick={() => handlePaymentSelect("cod")}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                        selectedPayment === "cod"
+                          ? "border-orange-500 bg-orange-50"
+                          : "border-border hover:border-orange-300 hover:bg-orange-50/50"
+                      }`}
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-orange-500 flex items-center justify-center shrink-0">
+                        <Banknote className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-orange-800">
+                          Cash on Delivery
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Pay when you receive
+                        </div>
+                      </div>
+                      {selectedPayment === "cod" && (
+                        <div className="w-4 h-4 rounded-full bg-orange-500 shrink-0" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 <Button
                   data-ocid="cart.submit_button"
-                  onClick={handlePlaceOrder}
-                  disabled={placeOrder.isPending}
-                  className="w-full mt-6 bg-primary hover:bg-primary/90 h-12 text-base font-semibold"
+                  onClick={handleProceed}
+                  disabled={!selectedPayment || placeOrder.isPending}
+                  className="w-full bg-primary hover:bg-primary/90 h-12 text-base font-semibold"
                 >
-                  {placeOrder.isPending ? "Placing Order..." : "Place Order"}
+                  {placeOrder.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : selectedPayment === "cod" ? (
+                    "Place Order (COD)"
+                  ) : selectedPayment ? (
+                    "Proceed to Payment"
+                  ) : (
+                    "Select Payment Method"
+                  )}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center mt-3">
+                <p className="text-xs text-muted-foreground text-center">
                   Secure checkout guaranteed
                 </p>
               </div>
@@ -257,6 +421,80 @@ export default function CartPage() {
         )}
       </main>
       <Footer />
+
+      {/* QR Payment Modal */}
+      <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+        <DialogContent data-ocid="cart.dialog" className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              {paymentLabel} Payment
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-2">
+            {activeQrImage ? (
+              <>
+                <div className="w-56 h-56 rounded-xl overflow-hidden border-2 border-border bg-white p-2">
+                  <img
+                    src={activeQrImage}
+                    alt={`${paymentLabel} QR Code`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <p className="text-sm text-center text-muted-foreground">
+                  Scan the QR code and complete payment, then click{" "}
+                  <span className="font-semibold text-foreground">
+                    Confirm Order
+                  </span>
+                </p>
+                <div className="bg-muted rounded-lg px-4 py-2 text-center">
+                  <span className="text-xs text-muted-foreground">
+                    Total Amount
+                  </span>
+                  <div className="font-bold text-primary text-lg">
+                    NPR {subtotal.toLocaleString()}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <QrCode className="w-16 h-16 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground text-center">
+                  Payment QR not configured yet. Please contact the seller.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              data-ocid="cart.cancel_button"
+              variant="outline"
+              onClick={() => setQrModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            {activeQrImage && (
+              <Button
+                data-ocid="cart.confirm_button"
+                onClick={handleConfirmOrder}
+                disabled={placeOrder.isPending}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {placeOrder.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Placing...
+                  </>
+                ) : (
+                  "Confirm Order"
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -121,6 +121,7 @@ export interface _SERVICE {
   'getProduct' : ActorMethod<[bigint], Product>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'loginAsAdmin' : ActorMethod<[string], boolean>,
   'placeOrder' : ActorMethod<[], bigint>,
   'removeCartItem' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,

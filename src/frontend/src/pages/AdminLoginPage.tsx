@@ -13,10 +13,12 @@ import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createActorWithConfig } from "../config";
+import { getOrCreateAdminIdentity } from "../hooks/useAdminIdentity";
 
 // Admin credentials — change these to your preferred username and password
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "EasyARS@Admin2024";
+const ADMIN_USERNAME = "ARSadmin";
+const ADMIN_PASSWORD = "ARS@12345";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
@@ -42,9 +44,26 @@ export default function AdminLoginPage() {
         return;
       }
 
+      // Get or create a persistent identity for the admin
+      const adminIdentity = getOrCreateAdminIdentity();
+
+      // Create an actor with that identity
+      const actor = await createActorWithConfig({
+        agentOptions: { identity: adminIdentity },
+      });
+
+      // Register this identity as admin in the backend
+      const success = await actor.loginAsAdmin(password);
+      if (!success) {
+        setError("Backend authentication failed. Please try again.");
+        return;
+      }
+
       sessionStorage.setItem("adminAuth", btoa(`${username}:${password}`));
       toast.success("Welcome back, Admin!");
       navigate({ to: "/admin" });
+    } catch (err) {
+      setError(`Login failed: ${err}`);
     } finally {
       setLoading(false);
     }

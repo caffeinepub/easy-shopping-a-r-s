@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { useImageUpload } from "../../hooks/useImageUpload";
 import {
   type Product,
-  useActiveProducts,
+  useAllProductsAdmin,
   useCreateProduct,
   useToggleProductActive,
   useUpdateProduct,
@@ -56,7 +56,7 @@ const emptyForm: ProductForm = {
 };
 
 export default function AdminProducts() {
-  const { data: products, isLoading } = useActiveProducts();
+  const { data: products, isLoading } = useAllProductsAdmin();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const toggleActive = useToggleProductActive();

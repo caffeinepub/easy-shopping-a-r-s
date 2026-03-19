@@ -15,10 +15,11 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
+import AdminPayments from "./pages/admin/AdminPayments";
 import AdminProducts from "./pages/admin/AdminProducts";
 
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "EasyARS@Admin2024";
+const ADMIN_USERNAME = "ARSadmin";
+const ADMIN_PASSWORD = "ARS@12345";
 
 function RootComponent() {
   return (
@@ -129,6 +130,16 @@ const adminOrdersRoute = createRoute({
   ),
 });
 
+const adminPaymentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/payments",
+  component: () => (
+    <AdminGuard>
+      <AdminPayments />
+    </AdminGuard>
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   productRoute,
@@ -139,6 +150,7 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   adminProductsRoute,
   adminOrdersRoute,
+  adminPaymentsRoute,
 ]);
 
 const router = createRouter({ routeTree });

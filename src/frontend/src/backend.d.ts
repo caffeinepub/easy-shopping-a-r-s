@@ -84,6 +84,7 @@ export interface backendInterface {
     getProduct(productId: bigint): Promise<Product>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    loginAsAdmin(password: string): Promise<boolean>;
     placeOrder(): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;

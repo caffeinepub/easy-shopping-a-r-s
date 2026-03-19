@@ -19,6 +19,8 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
+  let ADMIN_PASSWORD : Text = "ARS@12345";
+
   type Product = {
     id : Nat;
     name : Text;
@@ -82,8 +84,14 @@ actor {
     phone : Text;
   };
 
+  public type PaymentQRs = {
+    esewaQrImageId : Text;
+    bankQrImageId : Text;
+  };
+
   var nextProductId = 1;
   var nextOrderId = 1;
+  var paymentQRs : PaymentQRs = { esewaQrImageId = ""; bankQrImageId = "" };
 
   let products = Map.empty<Nat, Product>();
   let carts = Map.empty<Principal, List.List<CartItem>>();
@@ -96,6 +104,27 @@ actor {
     if (caller.isAnonymous()) {
       Runtime.trap("You must be logged in to perform this action");
     };
+  };
+
+  // Admin login: grants admin role to the caller if password matches
+  public shared ({ caller }) func loginAsAdmin(password : Text) : async Bool {
+    if (caller.isAnonymous()) { return false };
+    if (password != ADMIN_PASSWORD) { return false };
+    accessControlState.userRoles.add(caller, #admin);
+    accessControlState.adminAssigned := true;
+    true;
+  };
+
+  // PAYMENT QR MANAGEMENT
+  public shared ({ caller }) func setPaymentQRs(esewaQrImageId : Text, bankQrImageId : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Only admins can update payment QR codes");
+    };
+    paymentQRs := { esewaQrImageId; bankQrImageId };
+  };
+
+  public query func getPaymentQRs() : async PaymentQRs {
+    paymentQRs;
   };
 
   // USER PROFILE MANAGEMENT

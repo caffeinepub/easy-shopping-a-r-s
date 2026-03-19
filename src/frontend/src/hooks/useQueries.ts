@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CartItem, Order, Product, UserProfile } from "../backend";
 import { UserRole } from "../backend";
 import { useActor } from "./useActor";
+import { useAdminActor } from "./useAdminActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 export type { Product, CartItem, Order, UserProfile };
@@ -10,6 +11,11 @@ export { UserRole };
 // Extended profile type that includes phone (supported by backend but not in generated types)
 export interface BuyerProfile extends UserProfile {
   phone: string;
+}
+
+export interface PaymentQRs {
+  esewaQrImageId: string;
+  bankQrImageId: string;
 }
 
 export function useUserRole() {
@@ -45,6 +51,18 @@ export function useActiveProducts() {
     queryFn: async () => {
       if (!actor) return [];
       return actor.getActiveProducts();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useAllProductsAdmin() {
+  const { actor, isFetching } = useAdminActor();
+  return useQuery<Product[]>({
+    queryKey: ["allProductsAdmin"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllProductsAdmin();
     },
     enabled: !!actor && !isFetching,
   });
@@ -87,7 +105,7 @@ export function useMyOrders() {
 }
 
 export function useAllOrders() {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useAdminActor();
   return useQuery<Order[]>({
     queryKey: ["allOrders"],
     queryFn: async () => {
@@ -99,7 +117,7 @@ export function useAllOrders() {
 }
 
 export function useInsights() {
-  const { actor, isFetching } = useActor();
+  const { actor, isFetching } = useAdminActor();
   return useQuery({
     queryKey: ["insights"],
     queryFn: async () => {
@@ -206,7 +224,7 @@ export function usePlaceOrder() {
 }
 
 export function useCreateProduct() {
-  const { actor } = useActor();
+  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -218,7 +236,7 @@ export function useCreateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      if (!actor) throw new Error("Not connected");
+      if (!actor) throw new Error("Not connected as admin");
       return actor.createProduct({
         name: data.name,
         description: data.description,
@@ -229,12 +247,12 @@ export function useCreateProduct() {
         stockQty: data.stockQty,
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["activeProducts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allProductsAdmin"] }),
   });
 }
 
 export function useUpdateProduct() {
-  const { actor } = useActor();
+  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -247,7 +265,7 @@ export function useUpdateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      if (!actor) throw new Error("Not connected");
+      if (!actor) throw new Error("Not connected as admin");
       return actor.updateProduct({
         id: data.id,
         name: data.name,
@@ -259,31 +277,31 @@ export function useUpdateProduct() {
         stockQty: data.stockQty,
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["activeProducts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allProductsAdmin"] }),
   });
 }
 
 export function useToggleProductActive() {
-  const { actor } = useActor();
+  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, isActive }: { id: bigint; isActive: boolean }) => {
-      if (!actor) throw new Error("Not connected");
+      if (!actor) throw new Error("Not connected as admin");
       return actor.toggleProductActive(id, isActive);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["activeProducts"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allProductsAdmin"] }),
   });
 }
 
 export function useUpdateOrderStatus() {
-  const { actor } = useActor();
+  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
       orderId,
       status,
     }: { orderId: bigint; status: string }) => {
-      if (!actor) throw new Error("Not connected");
+      if (!actor) throw new Error("Not connected as admin");
       return actor.updateOrderStatus(orderId, status);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["allOrders"] }),
@@ -308,5 +326,37 @@ export function useAssignRole() {
       qc.invalidateQueries({ queryKey: ["userRole"] });
       qc.invalidateQueries({ queryKey: ["isAdmin"] });
     },
+  });
+}
+
+export function usePaymentQRs() {
+  const { actor, isFetching } = useActor();
+  return useQuery<PaymentQRs>({
+    queryKey: ["paymentQRs"],
+    queryFn: async () => {
+      if (!actor) return { esewaQrImageId: "", bankQrImageId: "" };
+      try {
+        const result = await (actor as any).getPaymentQRs();
+        return result as PaymentQRs;
+      } catch {
+        return { esewaQrImageId: "", bankQrImageId: "" };
+      }
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useSetPaymentQRs() {
+  const { actor } = useAdminActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      esewaQrImageId,
+      bankQrImageId,
+    }: { esewaQrImageId: string; bankQrImageId: string }) => {
+      if (!actor) throw new Error("Not connected as admin");
+      return (actor as any).setPaymentQRs(esewaQrImageId, bankQrImageId);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["paymentQRs"] }),
   });
 }

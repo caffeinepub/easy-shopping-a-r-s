@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  CreditCard,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -14,6 +15,7 @@ const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/admin/products", icon: Package, label: "Products" },
   { to: "/admin/orders", icon: ShoppingBag, label: "Orders" },
+  { to: "/admin/payments", icon: CreditCard, label: "Payment Settings" },
 ];
 
 export default function AdminLayout({
@@ -24,7 +26,7 @@ export default function AdminLayout({
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    sessionStorage.removeItem("adminPass");
+    sessionStorage.removeItem("adminAuth");
     navigate({ to: "/" });
   };
 
