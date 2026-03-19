@@ -74,7 +74,7 @@ export default function HomePage() {
                 </Badge>
                 <h1 className="font-display text-3xl md:text-5xl font-bold text-white leading-tight">
                   Easy Shopping
-                  <span className="block text-primary">A.R.S</span>
+                  <span className="block text-black">A.R.S</span>
                 </h1>
                 <p className="text-white/80 mt-2 text-sm md:text-base max-w-xs">
                   Discover amazing deals on thousands of products
@@ -202,6 +202,15 @@ export default function HomePage() {
               ))}
             </motion.div>
           )}
+        </section>
+
+        {/* Down Side Background Banner */}
+        <section className="w-full">
+          <img
+            src="/assets/uploads/IMG-20260318-WA0106-2-1.jpg"
+            alt="A.R.S Easy Shopping Delivery"
+            className="w-full object-cover max-h-72 md:max-h-96"
+          />
         </section>
       </main>
 

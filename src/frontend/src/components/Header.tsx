@@ -102,7 +102,7 @@ export default function Header({ onSearch }: HeaderProps) {
           className="flex items-center shrink-0"
         >
           <img
-            src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1-1.png"
+            src="/assets/uploads/IMG_20260318_185950_387-1.webp"
             alt="Easy Shopping A.R.S"
             className="h-14 w-auto max-w-[160px] object-contain block rounded-md"
           />

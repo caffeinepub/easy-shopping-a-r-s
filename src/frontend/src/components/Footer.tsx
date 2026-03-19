@@ -10,7 +10,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <img
-                src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1-1.png"
+                src="/assets/uploads/IMG_20260318_185950_387-1.webp"
                 alt="Easy Shopping A.R.S"
                 className="h-12 w-auto max-w-[130px] object-contain block rounded-md"
               />
@@ -30,6 +30,9 @@ export default function Footer() {
               <li>Home &amp; Garden</li>
               <li>Sports</li>
             </ul>
+            <p className="text-xs text-white/60 mt-4">
+              Create By: Aaditya Kumar Kushwaha (A.R.K)
+            </p>
           </div>
 
           {/* Contact */}
@@ -119,6 +122,11 @@ export default function Footer() {
           >
             caffeine.ai
           </a>
+        </div>
+
+        {/* Creator credit */}
+        <div className="text-center text-xs text-white/30 mt-3">
+          Created By: Aaditya Kumar Kushwaha (A.R.K)
         </div>
       </div>
     </footer>
