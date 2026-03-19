@@ -107,26 +107,26 @@ export const idlService = IDL.Service({
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'clearCart' : IDL.Func([], [], []),
   'createProduct' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal }), ProductInput],
+      [ProductInput],
       [IDL.Nat],
       [],
     ),
   'getActiveProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
   'getAllOrders' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal })],
+      [],
       [IDL.Vec(Order)],
       [],
     ),
   'getAllProductsAdmin' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal })],
+      [],
       [IDL.Vec(Product)],
       [],
     ),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getCart' : IDL.Func([], [IDL.Vec(CartItem)], ['query']),
+  'getCart' : IDL.Func([], [IDL.Vec(CartItem)], []),
   'getInsights' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal })],
+      [],
       [
         IDL.Record({
           'cancelledOrders' : IDL.Nat,
@@ -138,7 +138,7 @@ export const idlService = IDL.Service({
       ],
       [],
     ),
-  'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
+  'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], []),
   'getProduct' : IDL.Func([IDL.Nat], [Product], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -151,23 +151,23 @@ export const idlService = IDL.Service({
   'removeCartItem' : IDL.Func([IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'toggleProductActive' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal }), IDL.Nat, IDL.Bool],
+      [IDL.Nat, IDL.Bool],
       [],
       [],
     ),
   'updateCartItem' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
   'updateOrderStatus' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal }), IDL.Nat, IDL.Text],
+      [IDL.Nat, IDL.Text],
       [],
       [],
     ),
   'updateProduct' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal }), ProductUpdateInput],
+      [ProductUpdateInput],
       [],
       [],
     ),
   'updateProductStock' : IDL.Func(
-      [IDL.Record({ 'caller' : IDL.Principal }), IDL.Nat, IDL.Nat],
+      [IDL.Nat, IDL.Nat],
       [],
       [],
     ),
@@ -275,26 +275,26 @@ export const idlFactory = ({ IDL }) => {
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'clearCart' : IDL.Func([], [], []),
     'createProduct' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal }), ProductInput],
+        [ProductInput],
         [IDL.Nat],
         [],
       ),
     'getActiveProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
     'getAllOrders' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal })],
+        [],
         [IDL.Vec(Order)],
         [],
       ),
     'getAllProductsAdmin' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal })],
+        [],
         [IDL.Vec(Product)],
         [],
       ),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getCart' : IDL.Func([], [IDL.Vec(CartItem)], ['query']),
+    'getCart' : IDL.Func([], [IDL.Vec(CartItem)], []),
     'getInsights' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal })],
+        [],
         [
           IDL.Record({
             'cancelledOrders' : IDL.Nat,
@@ -306,7 +306,7 @@ export const idlFactory = ({ IDL }) => {
         ],
         [],
       ),
-    'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
+    'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], []),
     'getProduct' : IDL.Func([IDL.Nat], [Product], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -319,23 +319,23 @@ export const idlFactory = ({ IDL }) => {
     'removeCartItem' : IDL.Func([IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'toggleProductActive' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal }), IDL.Nat, IDL.Bool],
+        [IDL.Nat, IDL.Bool],
         [],
         [],
       ),
     'updateCartItem' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
     'updateOrderStatus' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal }), IDL.Nat, IDL.Text],
+        [IDL.Nat, IDL.Text],
         [],
         [],
       ),
     'updateProduct' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal }), ProductUpdateInput],
+        [ProductUpdateInput],
         [],
         [],
       ),
     'updateProductStock' : IDL.Func(
-        [IDL.Record({ 'caller' : IDL.Principal }), IDL.Nat, IDL.Nat],
+        [IDL.Nat, IDL.Nat],
         [],
         [],
       ),

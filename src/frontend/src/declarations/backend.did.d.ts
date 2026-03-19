@@ -94,21 +94,15 @@ export interface _SERVICE {
   'addToCart' : ActorMethod<[bigint, bigint], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'clearCart' : ActorMethod<[], undefined>,
-  'createProduct' : ActorMethod<
-    [{ 'caller' : Principal }, ProductInput],
-    bigint
-  >,
+  'createProduct' : ActorMethod<[ProductInput], bigint>,
   'getActiveProducts' : ActorMethod<[], Array<Product>>,
-  'getAllOrders' : ActorMethod<[{ 'caller' : Principal }], Array<Order>>,
-  'getAllProductsAdmin' : ActorMethod<
-    [{ 'caller' : Principal }],
-    Array<Product>
-  >,
+  'getAllOrders' : ActorMethod<[], Array<Order>>,
+  'getAllProductsAdmin' : ActorMethod<[], Array<Product>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCart' : ActorMethod<[], Array<CartItem>>,
   'getInsights' : ActorMethod<
-    [{ 'caller' : Principal }],
+    [],
     {
       'cancelledOrders' : bigint,
       'totalOrders' : bigint,
@@ -125,23 +119,11 @@ export interface _SERVICE {
   'placeOrder' : ActorMethod<[], bigint>,
   'removeCartItem' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'toggleProductActive' : ActorMethod<
-    [{ 'caller' : Principal }, bigint, boolean],
-    undefined
-  >,
+  'toggleProductActive' : ActorMethod<[bigint, boolean], undefined>,
   'updateCartItem' : ActorMethod<[bigint, bigint], undefined>,
-  'updateOrderStatus' : ActorMethod<
-    [{ 'caller' : Principal }, bigint, string],
-    undefined
-  >,
-  'updateProduct' : ActorMethod<
-    [{ 'caller' : Principal }, ProductUpdateInput],
-    undefined
-  >,
-  'updateProductStock' : ActorMethod<
-    [{ 'caller' : Principal }, bigint, bigint],
-    undefined
-  >,
+  'updateOrderStatus' : ActorMethod<[bigint, string], undefined>,
+  'updateProduct' : ActorMethod<[ProductUpdateInput], undefined>,
+  'updateProductStock' : ActorMethod<[bigint, bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
