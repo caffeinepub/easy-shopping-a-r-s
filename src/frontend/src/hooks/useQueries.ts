@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CartItem, Order, Product, UserProfile } from "../backend";
 import { UserRole } from "../backend";
 import { useActor } from "./useActor";
-import { useAdminActor } from "./useAdminActor";
+import { getAdminActor, useAdminActor } from "./useAdminActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 export type { Product, CartItem, Order, UserProfile };
@@ -224,7 +224,6 @@ export function usePlaceOrder() {
 }
 
 export function useCreateProduct() {
-  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -236,7 +235,8 @@ export function useCreateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      if (!actor) throw new Error("Not connected as admin");
+      // Always get a fresh actor with admin role registered before mutating
+      const actor = await getAdminActor();
       return actor.createProduct({
         name: data.name,
         description: data.description,
@@ -252,7 +252,6 @@ export function useCreateProduct() {
 }
 
 export function useUpdateProduct() {
-  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -265,7 +264,7 @@ export function useUpdateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      if (!actor) throw new Error("Not connected as admin");
+      const actor = await getAdminActor();
       return actor.updateProduct({
         id: data.id,
         name: data.name,
@@ -282,11 +281,10 @@ export function useUpdateProduct() {
 }
 
 export function useToggleProductActive() {
-  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, isActive }: { id: bigint; isActive: boolean }) => {
-      if (!actor) throw new Error("Not connected as admin");
+      const actor = await getAdminActor();
       return actor.toggleProductActive(id, isActive);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["allProductsAdmin"] }),
@@ -294,14 +292,13 @@ export function useToggleProductActive() {
 }
 
 export function useUpdateOrderStatus() {
-  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
       orderId,
       status,
     }: { orderId: bigint; status: string }) => {
-      if (!actor) throw new Error("Not connected as admin");
+      const actor = await getAdminActor();
       return actor.updateOrderStatus(orderId, status);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["allOrders"] }),
@@ -347,14 +344,13 @@ export function usePaymentQRs() {
 }
 
 export function useSetPaymentQRs() {
-  const { actor } = useAdminActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
       esewaQrImageId,
       bankQrImageId,
     }: { esewaQrImageId: string; bankQrImageId: string }) => {
-      if (!actor) throw new Error("Not connected as admin");
+      const actor = await getAdminActor();
       return (actor as any).setPaymentQRs(esewaQrImageId, bankQrImageId);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["paymentQRs"] }),

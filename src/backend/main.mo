@@ -21,6 +21,9 @@ actor {
 
   let ADMIN_PASSWORD : Text = "A.R.S@12345";
 
+  // Stable storage for admin principal - persists across upgrades and redeployments
+  stable var stableAdminPrincipal : ?Principal = null;
+
   type Product = {
     id : Nat;
     name : Text;
@@ -99,29 +102,45 @@ actor {
   let userProfiles = Map.empty<Principal, UserProfileV1>();
   let userProfilesV2 = Map.empty<Principal, UserProfile>();
 
-  // Require a logged-in (non-anonymous) caller for buyer operations
   func requireLoggedIn(caller : Principal) {
     if (caller.isAnonymous()) {
       Runtime.trap("You must be logged in to perform this action");
     };
   };
 
-  // Admin login: grants admin role to the caller if password matches.
-  // Works for any caller including anonymous (needed for frontend compatibility).
+  // Restore admin role from stable memory into access control state
+  func ensureAdminRoleFromStable() {
+    switch (stableAdminPrincipal) {
+      case (?adminP) {
+        accessControlState.userRoles.add(adminP, #admin);
+        accessControlState.adminAssigned := true;
+      };
+      case (null) {};
+    };
+  };
+
+  // Admin login: grants admin role and stores in stable memory
   public shared ({ caller }) func loginAsAdmin(password : Text) : async Bool {
     if (password != ADMIN_PASSWORD) { return false };
     accessControlState.userRoles.add(caller, #admin);
     accessControlState.adminAssigned := true;
+    stableAdminPrincipal := ?caller;
     true;
   };
 
-  // Admin check: verify password directly without identity requirement
+  // Admin check: in-memory roles OR stable principal fallback
   func isAdminCaller(caller : Principal) : Bool {
-    AccessControl.hasPermission(accessControlState, caller, #admin)
+    if (AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      return true;
+    };
+    switch (stableAdminPrincipal) {
+      case (?adminP) { adminP == caller };
+      case (null) { false };
+    };
   };
 
-  // PAYMENT QR MANAGEMENT
   public shared ({ caller }) func setPaymentQRs(esewaQrImageId : Text, bankQrImageId : Text) : async () {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update payment QR codes");
     };
@@ -132,7 +151,6 @@ actor {
     paymentQRs;
   };
 
-  // USER PROFILE MANAGEMENT
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     requireLoggedIn(caller);
     switch (userProfilesV2.get(caller)) {
@@ -182,6 +200,7 @@ actor {
   };
 
   public shared ({ caller }) func getAllProductsAdmin() : async [Product] {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get all products");
     };
@@ -189,10 +208,10 @@ actor {
   };
 
   public shared ({ caller }) func createProduct(newProduct : ProductInput) : async Nat {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can create products");
     };
-
     let product : Product = {
       id = nextProductId;
       name = newProduct.name;
@@ -205,22 +224,20 @@ actor {
       isActive = true;
       createdAt = Time.now();
     };
-
     nextProductId += 1;
     products.add(product.id, product);
     product.id;
   };
 
   public shared ({ caller }) func updateProduct(productUpdate : ProductUpdateInput) : async () {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update products");
     };
-
     let currentProduct = switch (products.get(productUpdate.id)) {
       case (null) { Runtime.trap("Product not found") };
       case (?product) { product };
     };
-
     let updatedProduct : Product = {
       currentProduct with
       name = productUpdate.name;
@@ -231,59 +248,50 @@ actor {
       imageId = productUpdate.imageId;
       stockQty = productUpdate.stockQty;
     };
-
     products.add(productUpdate.id, updatedProduct);
   };
 
   public shared ({ caller }) func toggleProductActive(id : Nat, isActive : Bool) : async () {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can change product status");
     };
-
     let product = switch (products.get(id)) {
       case (null) { Runtime.trap("Product not found") };
       case (?prod) { prod };
     };
-
     let updatedProduct : Product = { product with isActive };
     products.add(id, updatedProduct);
   };
 
   public shared ({ caller }) func updateProductStock(id : Nat, newQty : Nat) : async () {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update product stock");
     };
-
     let product = switch (products.get(id)) {
       case (null) { Runtime.trap("Product not found") };
       case (?prod) { prod };
     };
-
     let updatedProduct : Product = { product with stockQty = newQty };
     products.add(id, updatedProduct);
   };
 
   public shared ({ caller }) func addToCart(productId : Nat, quantity : Nat) : async () {
     requireLoggedIn(caller);
-
     if (quantity == 0) { Runtime.trap("Quantity must be greater than 0") };
-
     let product = switch (products.get(productId)) {
       case (null) { Runtime.trap("Product not found") };
       case (?prod) { prod };
     };
-
     if (not product.isActive) { Runtime.trap("Product not active") };
     if (quantity > product.stockQty) { Runtime.trap("Quantity exceeds available stock") };
-
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
       case (?existingCart) { existingCart };
     };
-
     var updatedQuantity = quantity;
     let newCartItems = List.empty<CartItem>();
-
     cart.values().forEach(
       func(item) {
         if (item.productId == productId) { updatedQuantity += item.quantity } else {
@@ -291,67 +299,47 @@ actor {
         };
       }
     );
-
     if (updatedQuantity > product.stockQty) { Runtime.trap("Total quantity exceeds available stock") };
-
-    newCartItems.add({
-      productId;
-      quantity = updatedQuantity;
-      priceAtOrder = product.price;
-    });
-
+    newCartItems.add({ productId; quantity = updatedQuantity; priceAtOrder = product.price });
     carts.add(caller, newCartItems);
   };
 
   public shared ({ caller }) func updateCartItem(productId : Nat, newQuantity : Nat) : async () {
     requireLoggedIn(caller);
-
     if (newQuantity == 0) { Runtime.trap("Quantity must be greater than 0") };
-
     let product = switch (products.get(productId)) {
       case (null) { Runtime.trap("Product not found") };
       case (?prod) { prod };
     };
-
     if (not product.isActive) { Runtime.trap("Product not active") };
     if (newQuantity > product.stockQty) { Runtime.trap("Quantity exceeds available stock") };
-
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
       case (?existingCart) { existingCart };
     };
-
     let updatedCart = List.empty<CartItem>();
     cart.values().forEach(
       func(item) {
         if (item.productId == productId) {
-          updatedCart.add({
-            productId;
-            quantity = newQuantity;
-            priceAtOrder = product.price;
-          });
+          updatedCart.add({ productId; quantity = newQuantity; priceAtOrder = product.price });
         } else { updatedCart.add(item) };
       }
     );
-
     carts.add(caller, updatedCart);
   };
 
   public shared ({ caller }) func removeCartItem(productId : Nat) : async () {
     requireLoggedIn(caller);
-
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
       case (?existingCart) { existingCart };
     };
-
     let updatedCart = List.empty<CartItem>();
     cart.values().forEach(
       func(item) {
         if (item.productId != productId) { updatedCart.add(item) };
       }
     );
-
     carts.add(caller, updatedCart);
   };
 
@@ -370,29 +358,19 @@ actor {
 
   public shared ({ caller }) func placeOrder() : async Nat {
     requireLoggedIn(caller);
-
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
       case (?existingCart) { existingCart };
     };
-
     if (cart.size() == 0) { Runtime.trap("Cart is empty") };
-
     for (item in cart.values()) {
       let product = switch (products.get(item.productId)) {
         case (null) { Runtime.trap("Product not found: " # item.productId.toText()) };
         case (?prod) { prod };
       };
-
-      if (not product.isActive) {
-        Runtime.trap("Product not active: " # item.productId.toText());
-      };
-
-      if (item.quantity > product.stockQty) {
-        Runtime.trap("Insufficient stock for product: " # item.productId.toText());
-      };
+      if (not product.isActive) { Runtime.trap("Product not active: " # item.productId.toText()) };
+      if (item.quantity > product.stockQty) { Runtime.trap("Insufficient stock for product: " # item.productId.toText()) };
     };
-
     var totalAmount = 0;
     let validatedItems = cart.map<CartItem, CartItem>(
       func(item) {
@@ -400,19 +378,11 @@ actor {
           case (null) { Runtime.trap("Product not found: " # item.productId.toText()) };
           case (?prod) { prod };
         };
-
         let discountedPrice = product.price * (100 - product.discountPercent) / 100;
         totalAmount += discountedPrice * item.quantity;
-
-        let validatedItem : CartItem = {
-          productId = item.productId;
-          quantity = item.quantity;
-          priceAtOrder = discountedPrice;
-        };
-        validatedItem;
+        { productId = item.productId; quantity = item.quantity; priceAtOrder = discountedPrice };
       }
     );
-
     let order : Order = {
       id = nextOrderId;
       buyerId = caller;
@@ -421,26 +391,22 @@ actor {
       status = "Pending";
       createdAt = Time.now();
     };
-
     orders.add(nextOrderId, order);
     nextOrderId += 1;
-
     for (item in validatedItems.values()) {
       let product = switch (products.get(item.productId)) {
         case (null) { Runtime.trap("Product not found: " # item.productId.toText()) };
         case (?prod) { prod };
       };
-
       let updatedProduct : Product = { product with stockQty = product.stockQty - item.quantity };
       products.add(item.productId, updatedProduct);
     };
-
     carts.add(caller, List.empty<CartItem>());
-
     order.id;
   };
 
   public shared ({ caller }) func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update order status");
     };
@@ -448,7 +414,6 @@ actor {
       case (null) { Runtime.trap("Order not found") };
       case (?ord) { ord };
     };
-
     let updatedOrder : Order = { order with status = newStatus };
     orders.add(orderId, updatedOrder);
   };
@@ -459,6 +424,7 @@ actor {
   };
 
   public shared ({ caller }) func getAllOrders() : async [Order] {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get all orders");
     };
@@ -472,24 +438,16 @@ actor {
     completedOrders : Nat;
     cancelledOrders : Nat;
   } {
+    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get insights");
     };
-
     let allOrders = orders.values().toArray();
-
     let totalOrders = allOrders.size();
     let pendingOrders = allOrders.filter(func(order) { order.status == "Pending" }).size();
     let processingOrders = allOrders.filter(func(order) { order.status == "Processing" }).size();
     let completedOrders = allOrders.filter(func(order) { order.status == "Completed" }).size();
     let cancelledOrders = allOrders.filter(func(order) { order.status == "Cancelled" }).size();
-
-    {
-      totalOrders;
-      pendingOrders;
-      processingOrders;
-      completedOrders;
-      cancelledOrders;
-    };
+    { totalOrders; pendingOrders; processingOrders; completedOrders; cancelledOrders };
   };
 };
