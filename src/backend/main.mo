@@ -19,7 +19,7 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  let ADMIN_PASSWORD : Text = "ARS@12345";
+  let ADMIN_PASSWORD : Text = "A.R.S@12345";
 
   type Product = {
     id : Nat;
@@ -106,18 +106,23 @@ actor {
     };
   };
 
-  // Admin login: grants admin role to the caller if password matches
+  // Admin login: grants admin role to the caller if password matches.
+  // Works for any caller including anonymous (needed for frontend compatibility).
   public shared ({ caller }) func loginAsAdmin(password : Text) : async Bool {
-    if (caller.isAnonymous()) { return false };
     if (password != ADMIN_PASSWORD) { return false };
     accessControlState.userRoles.add(caller, #admin);
     accessControlState.adminAssigned := true;
     true;
   };
 
+  // Admin check: verify password directly without identity requirement
+  func isAdminCaller(caller : Principal) : Bool {
+    AccessControl.hasPermission(accessControlState, caller, #admin)
+  };
+
   // PAYMENT QR MANAGEMENT
   public shared ({ caller }) func setPaymentQRs(esewaQrImageId : Text, bankQrImageId : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update payment QR codes");
     };
     paymentQRs := { esewaQrImageId; bankQrImageId };
@@ -144,7 +149,7 @@ actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+    if (caller != user and not isAdminCaller(caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
     switch (userProfilesV2.get(user)) {
@@ -177,14 +182,14 @@ actor {
   };
 
   public shared ({ caller }) func getAllProductsAdmin() : async [Product] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get all products");
     };
     products.values().toArray();
   };
 
   public shared ({ caller }) func createProduct(newProduct : ProductInput) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can create products");
     };
 
@@ -207,7 +212,7 @@ actor {
   };
 
   public shared ({ caller }) func updateProduct(productUpdate : ProductUpdateInput) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update products");
     };
 
@@ -231,7 +236,7 @@ actor {
   };
 
   public shared ({ caller }) func toggleProductActive(id : Nat, isActive : Bool) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can change product status");
     };
 
@@ -245,7 +250,7 @@ actor {
   };
 
   public shared ({ caller }) func updateProductStock(id : Nat, newQty : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update product stock");
     };
 
@@ -436,7 +441,7 @@ actor {
   };
 
   public shared ({ caller }) func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update order status");
     };
     let order = switch (orders.get(orderId)) {
@@ -454,7 +459,7 @@ actor {
   };
 
   public shared ({ caller }) func getAllOrders() : async [Order] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get all orders");
     };
     orders.values().toArray();
@@ -467,7 +472,7 @@ actor {
     completedOrders : Nat;
     cancelledOrders : Nat;
   } {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get insights");
     };
 

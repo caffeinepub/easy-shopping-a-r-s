@@ -18,8 +18,8 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminProducts from "./pages/admin/AdminProducts";
 
-const ADMIN_USERNAME = "ARSadmin";
-const ADMIN_PASSWORD = "ARS@12345";
+const ADMIN_USERNAME = "easyshoppinga.r.k1@gmail.com";
+const ADMIN_PASSWORD = "A.R.S@12345";
 
 function RootComponent() {
   return (
@@ -47,7 +47,9 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
 
   try {
     const decoded = atob(adminAuth);
-    const [u, p] = decoded.split(":");
+    const colonIndex = decoded.indexOf(":");
+    const u = decoded.substring(0, colonIndex);
+    const p = decoded.substring(colonIndex + 1);
     if (u !== ADMIN_USERNAME || p !== ADMIN_PASSWORD) {
       sessionStorage.removeItem("adminAuth");
       window.location.href = "/admin-login";

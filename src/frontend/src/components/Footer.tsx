@@ -6,6 +6,7 @@ export default function Footer() {
     <footer className="bg-foreground text-white mt-16">
       <div className="container mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <img
@@ -20,6 +21,7 @@ export default function Footer() {
             </p>
           </div>
 
+          {/* Categories */}
           <div>
             <h4 className="font-semibold mb-3 text-white">Categories</h4>
             <ul className="space-y-2 text-sm text-white/60">
@@ -30,22 +32,79 @@ export default function Footer() {
             </ul>
           </div>
 
+          {/* Contact */}
           <div>
-            <h4 className="font-semibold mb-3 text-white">Help</h4>
+            <h4 className="font-semibold mb-3 text-white">Contact Us</h4>
             <ul className="space-y-2 text-sm text-white/60">
-              <li>Customer Support</li>
-              <li>Returns &amp; Refunds</li>
-              <li>Order Tracking</li>
-              <li>FAQs</li>
+              <li>
+                <a
+                  href="mailto:easyshoppinga.r.s1@gmail.com"
+                  className="hover:text-white transition-colors"
+                >
+                  📧 easyshoppinga.r.s1@gmail.com
+                </a>
+              </li>
+              <li>
+                <a
+                  href="tel:+9779812231441"
+                  className="hover:text-white transition-colors"
+                >
+                  📞 Support: +977 981-2231441
+                </a>
+              </li>
+              <li>
+                <a
+                  href="tel:+9779820210361"
+                  className="hover:text-white transition-colors"
+                >
+                  🏢 HEAD Office (A.R.K): +977 982-0210361
+                </a>
+              </li>
+              <li>
+                <a
+                  href="tel:+9779706800854"
+                  className="hover:text-white transition-colors"
+                >
+                  🏢 Ass. Head: +977 970-6800854
+                </a>
+              </li>
             </ul>
           </div>
 
+          {/* Social Media */}
           <div>
-            <h4 className="font-semibold mb-3 text-white">Contact</h4>
+            <h4 className="font-semibold mb-3 text-white">Follow Us</h4>
             <ul className="space-y-2 text-sm text-white/60">
-              <li>support@easyshopping.ars</li>
-              <li>0800-EASY-ARS</li>
-              <li>Mon-Sat: 9AM - 6PM</li>
+              <li>
+                <a
+                  href="https://www.facebook.com/easyshoppinga.r.s1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <span>📘</span> Facebook: easyshoppinga.r.s1
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.tiktok.com/@easyshoppinga.r.s1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <span>🎵</span> TikTok: easyshoppinga.r.s1
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.instagram.com/easyshoppinga.r.s1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <span>📸</span> Instagram: easyshoppinga.r.s1
+                </a>
+              </li>
             </ul>
           </div>
         </div>

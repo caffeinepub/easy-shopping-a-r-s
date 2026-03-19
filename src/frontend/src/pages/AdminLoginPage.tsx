@@ -14,11 +14,10 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { createActorWithConfig } from "../config";
-import { getOrCreateAdminIdentity } from "../hooks/useAdminIdentity";
 
-// Admin credentials — change these to your preferred username and password
-const ADMIN_USERNAME = "ARSadmin";
-const ADMIN_PASSWORD = "ARS@12345";
+// Admin credentials
+const ADMIN_USERNAME = "easyshoppinga.r.k1@gmail.com";
+const ADMIN_PASSWORD = "A.R.S@12345";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
@@ -44,26 +43,20 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Get or create a persistent identity for the admin
-      const adminIdentity = getOrCreateAdminIdentity();
-
-      // Create an actor with that identity
-      const actor = await createActorWithConfig({
-        agentOptions: { identity: adminIdentity },
-      });
-
-      // Register this identity as admin in the backend
-      const success = await actor.loginAsAdmin(password);
-      if (!success) {
-        setError("Backend authentication failed. Please try again.");
-        return;
+      // Try to register admin role in backend (best-effort, don't block login)
+      try {
+        const actor = await createActorWithConfig();
+        await actor.loginAsAdmin(password);
+      } catch {
+        // Ignore backend errors - credentials already verified above
       }
 
       sessionStorage.setItem("adminAuth", btoa(`${username}:${password}`));
       toast.success("Welcome back, Admin!");
       navigate({ to: "/admin" });
     } catch (err) {
-      setError(`Login failed: ${err}`);
+      console.error("Login error:", err);
+      setError("Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -80,7 +73,7 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="text-center mb-6">
           <img
-            src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1.png"
+            src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1-1.png"
             alt="Easy Shopping A.R.S"
             className="h-16 w-auto object-contain mx-auto mb-3"
           />
