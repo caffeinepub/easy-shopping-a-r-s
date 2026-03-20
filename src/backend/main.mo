@@ -108,39 +108,22 @@ actor {
     };
   };
 
-  // Restore admin role from stable memory into access control state
-  func ensureAdminRoleFromStable() {
-    switch (stableAdminPrincipal) {
-      case (?adminP) {
-        accessControlState.userRoles.add(adminP, #admin);
-        accessControlState.adminAssigned := true;
-      };
-      case (null) {};
-    };
-  };
-
-  // Admin login: grants admin role and stores in stable memory
-  public shared ({ caller }) func loginAsAdmin(password : Text) : async Bool {
-    if (password != ADMIN_PASSWORD) { return false };
-    accessControlState.userRoles.add(caller, #admin);
-    accessControlState.adminAssigned := true;
-    stableAdminPrincipal := ?caller;
-    true;
-  };
-
-  // Admin check: in-memory roles OR stable principal fallback
+  // Admin check: uses stable memory only - simple and reliable
   func isAdminCaller(caller : Principal) : Bool {
-    if (AccessControl.hasPermission(accessControlState, caller, #admin)) {
-      return true;
-    };
     switch (stableAdminPrincipal) {
       case (?adminP) { adminP == caller };
       case (null) { false };
     };
   };
 
+  // Admin login: stores caller principal in stable memory
+  public shared ({ caller }) func loginAsAdmin(password : Text) : async Bool {
+    if (password != ADMIN_PASSWORD) { return false };
+    stableAdminPrincipal := ?caller;
+    true;
+  };
+
   public shared ({ caller }) func setPaymentQRs(esewaQrImageId : Text, bankQrImageId : Text) : async () {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update payment QR codes");
     };
@@ -200,7 +183,6 @@ actor {
   };
 
   public shared ({ caller }) func getAllProductsAdmin() : async [Product] {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get all products");
     };
@@ -208,7 +190,6 @@ actor {
   };
 
   public shared ({ caller }) func createProduct(newProduct : ProductInput) : async Nat {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can create products");
     };
@@ -230,7 +211,6 @@ actor {
   };
 
   public shared ({ caller }) func updateProduct(productUpdate : ProductUpdateInput) : async () {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update products");
     };
@@ -252,7 +232,6 @@ actor {
   };
 
   public shared ({ caller }) func toggleProductActive(id : Nat, isActive : Bool) : async () {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can change product status");
     };
@@ -265,7 +244,6 @@ actor {
   };
 
   public shared ({ caller }) func updateProductStock(id : Nat, newQty : Nat) : async () {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update product stock");
     };
@@ -406,7 +384,6 @@ actor {
   };
 
   public shared ({ caller }) func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can update order status");
     };
@@ -424,7 +401,6 @@ actor {
   };
 
   public shared ({ caller }) func getAllOrders() : async [Order] {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get all orders");
     };
@@ -438,7 +414,6 @@ actor {
     completedOrders : Nat;
     cancelledOrders : Nat;
   } {
-    ensureAdminRoleFromStable();
     if (not isAdminCaller(caller)) {
       Runtime.trap("Only admins can get insights");
     };

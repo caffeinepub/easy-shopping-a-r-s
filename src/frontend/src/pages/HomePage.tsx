@@ -207,7 +207,7 @@ export default function HomePage() {
         {/* Down Side Background Banner */}
         <section className="w-full">
           <img
-            src="/assets/uploads/IMG-20260318-WA0106-2-1.jpg"
+            src="/assets/uploads/IMG-20260318-WA0106-3-1.jpg"
             alt="A.R.S Easy Shopping Delivery"
             className="w-full object-cover max-h-72 md:max-h-96"
           />
