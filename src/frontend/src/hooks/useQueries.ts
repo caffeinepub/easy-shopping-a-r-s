@@ -333,7 +333,7 @@ export function usePaymentQRs() {
     queryFn: async () => {
       if (!actor) return { esewaQrImageId: "", bankQrImageId: "" };
       try {
-        const result = await (actor as any).getPaymentQRs();
+        const result = await actor.getPaymentQRs();
         return result as PaymentQRs;
       } catch {
         return { esewaQrImageId: "", bankQrImageId: "" };
@@ -351,7 +351,7 @@ export function useSetPaymentQRs() {
       bankQrImageId,
     }: { esewaQrImageId: string; bankQrImageId: string }) => {
       const actor = await getAdminActor();
-      return (actor as any).setPaymentQRs(esewaQrImageId, bankQrImageId);
+      return actor.setPaymentQRs(esewaQrImageId, bankQrImageId);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["paymentQRs"] }),
   });

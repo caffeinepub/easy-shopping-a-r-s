@@ -5,74 +5,52 @@ import { Separator } from "@/components/ui/separator";
 import { CreditCard, Loader2, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { useImageUpload } from "../../hooks/useImageUpload";
 import { usePaymentQRs, useSetPaymentQRs } from "../../hooks/useQueries";
 import AdminLayout from "./AdminLayout";
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => resolve(ev.target?.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function AdminPayments() {
   const { data: paymentQRs, isLoading } = usePaymentQRs();
   const setQRs = useSetPaymentQRs();
-  const { uploadImage, uploading, progress } = useImageUpload();
 
-  const [esewaPreview, setEsewaPreview] = useState("");
-  const [bankPreview, setBankPreview] = useState("");
-  const [esewaImageId, setEsewaImageId] = useState("");
-  const [bankImageId, setBankImageId] = useState("");
-  const [uploadingEsewa, setUploadingEsewa] = useState(false);
-  const [uploadingBank, setUploadingBank] = useState(false);
+  const [esewaBase64, setEsewaBase64] = useState("");
+  const [bankBase64, setBankBase64] = useState("");
 
   const esewaFileRef = useRef<HTMLInputElement>(null);
   const bankFileRef = useRef<HTMLInputElement>(null);
 
-  // Initialize from backend data
-  const esewaQr = esewaImageId || paymentQRs?.esewaQrImageId || "";
-  const bankQr = bankImageId || paymentQRs?.bankQrImageId || "";
-  const esewaDisplay = esewaPreview || paymentQRs?.esewaQrImageId || "";
-  const bankDisplay = bankPreview || paymentQRs?.bankQrImageId || "";
+  const esewaDisplay = esewaBase64 || paymentQRs?.esewaQrImageId || "";
+  const bankDisplay = bankBase64 || paymentQRs?.bankQrImageId || "";
 
   const handleEsewaFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setEsewaPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-    setUploadingEsewa(true);
-    try {
-      const url = await uploadImage(file);
-      setEsewaImageId(url);
-      setEsewaPreview(url);
-      toast.success("eSewa QR uploaded!");
-    } catch {
-      toast.error("eSewa QR upload failed");
-    } finally {
-      setUploadingEsewa(false);
-    }
+    const base64 = await readAsBase64(file);
+    setEsewaBase64(base64);
+    toast.success("eSewa QR ready to save!");
   };
 
   const handleBankFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setBankPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-    setUploadingBank(true);
-    try {
-      const url = await uploadImage(file);
-      setBankImageId(url);
-      setBankPreview(url);
-      toast.success("Bank QR uploaded!");
-    } catch {
-      toast.error("Bank QR upload failed");
-    } finally {
-      setUploadingBank(false);
-    }
+    const base64 = await readAsBase64(file);
+    setBankBase64(base64);
+    toast.success("Bank QR ready to save!");
   };
 
   const handleSave = async () => {
     try {
       await setQRs.mutateAsync({
-        esewaQrImageId: esewaQr,
-        bankQrImageId: bankQr,
+        esewaQrImageId: esewaBase64 || paymentQRs?.esewaQrImageId || "",
+        bankQrImageId: bankBase64 || paymentQRs?.bankQrImageId || "",
       });
       toast.success("Payment QR codes saved successfully!");
     } catch {
@@ -133,10 +111,7 @@ export default function AdminPayments() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          setEsewaPreview("");
-                          setEsewaImageId("");
-                        }}
+                        onClick={() => setEsewaBase64("")}
                         className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 hover:bg-black/80 transition-colors"
                       >
                         <X className="w-3 h-3 text-white" />
@@ -160,13 +135,10 @@ export default function AdminPayments() {
                       data-ocid="admin.payments.upload_button"
                       variant="outline"
                       onClick={() => esewaFileRef.current?.click()}
-                      disabled={uploadingEsewa || uploading}
                       className="w-full gap-2 border-green-300 text-green-700 hover:bg-green-50"
                     >
                       <Upload className="w-4 h-4" />
-                      {uploadingEsewa
-                        ? `Uploading ${progress}%...`
-                        : "Upload eSewa QR"}
+                      Choose eSewa QR Image
                     </Button>
                     <input
                       ref={esewaFileRef}
@@ -209,10 +181,7 @@ export default function AdminPayments() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          setBankPreview("");
-                          setBankImageId("");
-                        }}
+                        onClick={() => setBankBase64("")}
                         className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 hover:bg-black/80 transition-colors"
                       >
                         <X className="w-3 h-3 text-white" />
@@ -236,13 +205,10 @@ export default function AdminPayments() {
                       data-ocid="admin.payments.upload_button"
                       variant="outline"
                       onClick={() => bankFileRef.current?.click()}
-                      disabled={uploadingBank || uploading}
                       className="w-full gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
                     >
                       <Upload className="w-4 h-4" />
-                      {uploadingBank
-                        ? `Uploading ${progress}%...`
-                        : "Upload Bank QR"}
+                      Choose Bank QR Image
                     </Button>
                     <input
                       ref={bankFileRef}

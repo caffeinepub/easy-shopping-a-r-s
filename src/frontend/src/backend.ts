@@ -180,6 +180,7 @@ export interface backendInterface {
         completedOrders: bigint;
     }>;
     getMyOrders(): Promise<Array<Order>>;
+    getPaymentQRs(): Promise<{ esewaQrImageId: string; bankQrImageId: string }>;
     getProduct(productId: bigint): Promise<Product>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
@@ -187,6 +188,7 @@ export interface backendInterface {
     placeOrder(): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    setPaymentQRs(esewaQrImageId: string, bankQrImageId: string): Promise<void>;
     toggleProductActive(id: bigint, isActive: boolean): Promise<void>;
     updateCartItem(productId: bigint, newQuantity: bigint): Promise<void>;
     updateOrderStatus(orderId: bigint, newStatus: string): Promise<void>;
@@ -468,6 +470,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getPaymentQRs(): Promise<{ esewaQrImageId: string; bankQrImageId: string }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPaymentQRs();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPaymentQRs();
+            return result;
+        }
+    }
     async getProduct(arg0: bigint): Promise<Product> {
         if (this.processError) {
             try {
@@ -563,6 +579,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async setPaymentQRs(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setPaymentQRs(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setPaymentQRs(arg0, arg1);
             return result;
         }
     }

@@ -74,6 +74,10 @@ export const ProductUpdateInput = IDL.Record({
   'imageId' : IDL.Text,
   'price' : IDL.Nat,
 });
+export const PaymentQRs = IDL.Record({
+  'esewaQrImageId' : IDL.Text,
+  'bankQrImageId' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -139,6 +143,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], []),
+  'getPaymentQRs' : IDL.Func([], [PaymentQRs], ['query']),
   'getProduct' : IDL.Func([IDL.Nat], [Product], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -150,6 +155,7 @@ export const idlService = IDL.Service({
   'placeOrder' : IDL.Func([], [IDL.Nat], []),
   'removeCartItem' : IDL.Func([IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'setPaymentQRs' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'toggleProductActive' : IDL.Func(
       [IDL.Nat, IDL.Bool],
       [],
@@ -242,6 +248,10 @@ export const idlFactory = ({ IDL }) => {
     'imageId' : IDL.Text,
     'price' : IDL.Nat,
   });
+  const PaymentQRs = IDL.Record({
+    'esewaQrImageId' : IDL.Text,
+    'bankQrImageId' : IDL.Text,
+  });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -307,6 +317,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'getMyOrders' : IDL.Func([], [IDL.Vec(Order)], []),
+    'getPaymentQRs' : IDL.Func([], [PaymentQRs], ['query']),
     'getProduct' : IDL.Func([IDL.Nat], [Product], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -318,6 +329,7 @@ export const idlFactory = ({ IDL }) => {
     'placeOrder' : IDL.Func([], [IDL.Nat], []),
     'removeCartItem' : IDL.Func([IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'setPaymentQRs' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'toggleProductActive' : IDL.Func(
         [IDL.Nat, IDL.Bool],
         [],

@@ -23,6 +23,10 @@ export interface Order {
   'buyerId' : Principal,
   'items' : Array<CartItem>,
 }
+export interface PaymentQRs {
+  'esewaQrImageId' : string,
+  'bankQrImageId' : string,
+}
 export interface Product {
   'id' : bigint,
   'stockQty' : bigint,
@@ -112,6 +116,7 @@ export interface _SERVICE {
     }
   >,
   'getMyOrders' : ActorMethod<[], Array<Order>>,
+  'getPaymentQRs' : ActorMethod<[], PaymentQRs>,
   'getProduct' : ActorMethod<[bigint], Product>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
@@ -119,6 +124,7 @@ export interface _SERVICE {
   'placeOrder' : ActorMethod<[], bigint>,
   'removeCartItem' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'setPaymentQRs' : ActorMethod<[string, string], undefined>,
   'toggleProductActive' : ActorMethod<[bigint, boolean], undefined>,
   'updateCartItem' : ActorMethod<[bigint, bigint], undefined>,
   'updateOrderStatus' : ActorMethod<[bigint, string], undefined>,
