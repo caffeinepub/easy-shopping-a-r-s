@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CartItem, Order, Product, UserProfile } from "../backend";
 import { UserRole } from "../backend";
 import { useActor } from "./useActor";
-import { getAdminActor, useAdminActor } from "./useAdminActor";
+import { getAdminActor } from "./useAdminActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 export type { Product, CartItem, Order, UserProfile };
@@ -57,14 +57,14 @@ export function useActiveProducts() {
 }
 
 export function useAllProductsAdmin() {
-  const { actor, isFetching } = useAdminActor();
   return useQuery<Product[]>({
     queryKey: ["allProductsAdmin"],
     queryFn: async () => {
-      if (!actor) return [];
+      const actor = await getAdminActor();
       return actor.getAllProductsAdmin();
     },
-    enabled: !!actor && !isFetching,
+    retry: 2,
+    staleTime: 30000,
   });
 }
 
@@ -105,26 +105,26 @@ export function useMyOrders() {
 }
 
 export function useAllOrders() {
-  const { actor, isFetching } = useAdminActor();
   return useQuery<Order[]>({
     queryKey: ["allOrders"],
     queryFn: async () => {
-      if (!actor) return [];
+      const actor = await getAdminActor();
       return actor.getAllOrders();
     },
-    enabled: !!actor && !isFetching,
+    retry: 2,
+    staleTime: 30000,
   });
 }
 
 export function useInsights() {
-  const { actor, isFetching } = useAdminActor();
   return useQuery({
     queryKey: ["insights"],
     queryFn: async () => {
-      if (!actor) return null;
+      const actor = await getAdminActor();
       return actor.getInsights();
     },
-    enabled: !!actor && !isFetching,
+    retry: 2,
+    staleTime: 30000,
   });
 }
 

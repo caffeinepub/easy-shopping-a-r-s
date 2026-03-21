@@ -30,7 +30,10 @@ export default function Footer() {
               <li>Home &amp; Garden</li>
               <li>Sports</li>
             </ul>
-            <p className="text-xs text-white/60 mt-4">
+            <p
+              className="text-xs font-semibold mt-4"
+              style={{ color: "#000000" }}
+            >
               Create By: Aaditya Kumar Kushwaha (A.R.K)
             </p>
           </div>
@@ -122,11 +125,6 @@ export default function Footer() {
           >
             caffeine.ai
           </a>
-        </div>
-
-        {/* Creator credit */}
-        <div className="text-center text-xs text-white/30 mt-3">
-          Created By: Aaditya Kumar Kushwaha (A.R.K)
         </div>
       </div>
     </footer>

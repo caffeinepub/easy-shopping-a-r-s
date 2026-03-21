@@ -73,9 +73,12 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="text-center mb-6">
           <img
-            src="/assets/uploads/Gemini_Generated_Image_ldyqarldyqarldyq-1-1.png"
+            src="/assets/uploads/IMG_20260318_185950_387-1.webp"
             alt="Easy Shopping A.R.S"
             className="h-16 w-auto object-contain mx-auto mb-3"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
         </div>
 
