@@ -14,13 +14,19 @@ export function useImageUpload() {
     setProgress(0);
     try {
       const config = await loadConfig();
-      const agent = new HttpAgent({
+
+      const agentOptions: { host?: string; identity?: typeof identity } = {
         host: config.backend_host,
-        identity: identity ?? undefined,
-      });
+      };
+      if (identity && !identity.getPrincipal().isAnonymous()) {
+        agentOptions.identity = identity;
+      }
+
+      const agent = new HttpAgent(agentOptions);
       if (config.backend_host?.includes("localhost")) {
         await agent.fetchRootKey().catch(() => {});
       }
+
       const storageClient = new StorageClient(
         config.bucket_name,
         config.storage_gateway_url,

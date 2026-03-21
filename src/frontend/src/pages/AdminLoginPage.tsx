@@ -13,9 +13,7 @@ import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { createActorWithConfig } from "../config";
 
-// Admin credentials
 const ADMIN_USERNAME = "easyshoppinga.r.k1@gmail.com";
 const ADMIN_PASSWORD = "A.R.S@12345";
 
@@ -43,14 +41,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Try to register admin role in backend (best-effort, don't block login)
-      try {
-        const actor = await createActorWithConfig();
-        await actor.loginAsAdmin(password);
-      } catch {
-        // Ignore backend errors - credentials already verified above
-      }
-
       sessionStorage.setItem("adminAuth", btoa(`${username}:${password}`));
       toast.success("Welcome back, Admin!");
       navigate({ to: "/admin" });
@@ -70,7 +60,6 @@ export default function AdminLoginPage() {
         transition={{ duration: 0.4, ease: "easeOut" }}
         className="w-full max-w-md"
       >
-        {/* Logo */}
         <div className="text-center mb-6">
           <img
             src="/assets/uploads/IMG_20260318_185950_387-1.webp"

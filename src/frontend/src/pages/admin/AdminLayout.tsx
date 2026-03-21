@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { resetAdminActor } from "../../hooks/useAdminActor";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
@@ -27,6 +28,7 @@ export default function AdminLayout({
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminAuth");
+    resetAdminActor();
     navigate({ to: "/" });
   };
 

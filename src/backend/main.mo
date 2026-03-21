@@ -19,9 +19,8 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  let ADMIN_PASSWORD : Text = "A.R.S@12345";
-
-  // Stable storage for admin principal - persists across upgrades and redeployments
+  // Kept for upgrade compatibility only - no longer used
+  stable var ADMIN_PASSWORD : Text = "";
   stable var stableAdminPrincipal : ?Principal = null;
 
   type Product = {
@@ -94,7 +93,8 @@ actor {
 
   var nextProductId = 1;
   var nextOrderId = 1;
-  var paymentQRs : PaymentQRs = { esewaQrImageId = ""; bankQrImageId = "" };
+  // Stable so payment QR codes persist across upgrades
+  stable var paymentQRs : PaymentQRs = { esewaQrImageId = ""; bankQrImageId = "" };
 
   let products = Map.empty<Nat, Product>();
   let carts = Map.empty<Principal, List.List<CartItem>>();
@@ -108,25 +108,7 @@ actor {
     };
   };
 
-  // Admin check: uses stable memory only - simple and reliable
-  func isAdminCaller(caller : Principal) : Bool {
-    switch (stableAdminPrincipal) {
-      case (?adminP) { adminP == caller };
-      case (null) { false };
-    };
-  };
-
-  // Admin login: stores caller principal in stable memory
-  public shared ({ caller }) func loginAsAdmin(password : Text) : async Bool {
-    if (password != ADMIN_PASSWORD) { return false };
-    stableAdminPrincipal := ?caller;
-    true;
-  };
-
-  public shared ({ caller }) func setPaymentQRs(esewaQrImageId : Text, bankQrImageId : Text) : async () {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can update payment QR codes");
-    };
+  public shared func setPaymentQRs(esewaQrImageId : Text, bankQrImageId : Text) : async () {
     paymentQRs := { esewaQrImageId; bankQrImageId };
   };
 
@@ -150,9 +132,6 @@ actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not isAdminCaller(caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
     switch (userProfilesV2.get(user)) {
       case (?profile) { ?profile };
       case (null) {
@@ -171,28 +150,22 @@ actor {
     userProfilesV2.add(caller, profile);
   };
 
-  public query ({ caller }) func getProduct(productId : Nat) : async Product {
+  public query func getProduct(productId : Nat) : async Product {
     switch (products.get(productId)) {
       case (null) { Runtime.trap("Product not found") };
       case (?product) { product };
     };
   };
 
-  public query ({ caller }) func getActiveProducts() : async [Product] {
+  public query func getActiveProducts() : async [Product] {
     products.values().toArray().filter(func(p) { p.isActive });
   };
 
-  public shared ({ caller }) func getAllProductsAdmin() : async [Product] {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can get all products");
-    };
+  public query func getAllProductsAdmin() : async [Product] {
     products.values().toArray();
   };
 
-  public shared ({ caller }) func createProduct(newProduct : ProductInput) : async Nat {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can create products");
-    };
+  public shared func createProduct(newProduct : ProductInput) : async Nat {
     let product : Product = {
       id = nextProductId;
       name = newProduct.name;
@@ -210,10 +183,7 @@ actor {
     product.id;
   };
 
-  public shared ({ caller }) func updateProduct(productUpdate : ProductUpdateInput) : async () {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can update products");
-    };
+  public shared func updateProduct(productUpdate : ProductUpdateInput) : async () {
     let currentProduct = switch (products.get(productUpdate.id)) {
       case (null) { Runtime.trap("Product not found") };
       case (?product) { product };
@@ -231,10 +201,7 @@ actor {
     products.add(productUpdate.id, updatedProduct);
   };
 
-  public shared ({ caller }) func toggleProductActive(id : Nat, isActive : Bool) : async () {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can change product status");
-    };
+  public shared func toggleProductActive(id : Nat, isActive : Bool) : async () {
     let product = switch (products.get(id)) {
       case (null) { Runtime.trap("Product not found") };
       case (?prod) { prod };
@@ -243,10 +210,7 @@ actor {
     products.add(id, updatedProduct);
   };
 
-  public shared ({ caller }) func updateProductStock(id : Nat, newQty : Nat) : async () {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can update product stock");
-    };
+  public shared func updateProductStock(id : Nat, newQty : Nat) : async () {
     let product = switch (products.get(id)) {
       case (null) { Runtime.trap("Product not found") };
       case (?prod) { prod };
@@ -383,10 +347,7 @@ actor {
     order.id;
   };
 
-  public shared ({ caller }) func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can update order status");
-    };
+  public shared func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
     let order = switch (orders.get(orderId)) {
       case (null) { Runtime.trap("Order not found") };
       case (?ord) { ord };
@@ -400,23 +361,17 @@ actor {
     orders.values().toArray().filter(func(o) { o.buyerId == caller });
   };
 
-  public shared ({ caller }) func getAllOrders() : async [Order] {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can get all orders");
-    };
+  public query func getAllOrders() : async [Order] {
     orders.values().toArray();
   };
 
-  public shared ({ caller }) func getInsights() : async {
+  public query func getInsights() : async {
     totalOrders : Nat;
     pendingOrders : Nat;
     processingOrders : Nat;
     completedOrders : Nat;
     cancelledOrders : Nat;
   } {
-    if (not isAdminCaller(caller)) {
-      Runtime.trap("Only admins can get insights");
-    };
     let allOrders = orders.values().toArray();
     let totalOrders = allOrders.size();
     let pendingOrders = allOrders.filter(func(order) { order.status == "Pending" }).size();

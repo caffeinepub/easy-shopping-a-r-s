@@ -62,6 +62,10 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export interface PaymentQRs {
+    esewaQrImageId: string;
+    bankQrImageId: string;
+}
 export interface backendInterface {
     addToCart(productId: bigint, quantity: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -81,13 +85,14 @@ export interface backendInterface {
         completedOrders: bigint;
     }>;
     getMyOrders(): Promise<Array<Order>>;
+    getPaymentQRs(): Promise<PaymentQRs>;
     getProduct(productId: bigint): Promise<Product>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    loginAsAdmin(password: string): Promise<boolean>;
     placeOrder(): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    setPaymentQRs(esewaQrImageId: string, bankQrImageId: string): Promise<void>;
     toggleProductActive(id: bigint, isActive: boolean): Promise<void>;
     updateCartItem(productId: bigint, newQuantity: bigint): Promise<void>;
     updateOrderStatus(orderId: bigint, newStatus: string): Promise<void>;
