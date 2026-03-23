@@ -18,6 +18,14 @@ export interface PaymentQRs {
   bankQrImageId: string;
 }
 
+export interface CancelNotification {
+  id: bigint;
+  orderId: bigint;
+  buyerPrincipal: string;
+  createdAt: bigint;
+  isRead: boolean;
+}
+
 export function useUserRole() {
   const { actor, isFetching } = useActor();
   return useQuery<UserRole>({
@@ -223,6 +231,46 @@ export function usePlaceOrder() {
       qc.invalidateQueries({ queryKey: ["cart"] });
       qc.invalidateQueries({ queryKey: ["myOrders"] });
     },
+  });
+}
+
+export function useCancelOrder() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderId: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).cancelOrder(orderId);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myOrders"] }),
+  });
+}
+
+export function useAdminCancelNotifications() {
+  return useQuery<CancelNotification[]>({
+    queryKey: ["adminCancelNotifications"],
+    queryFn: async () => {
+      try {
+        const actor = await getAdminActor();
+        const result = await (actor as any).getAdminCancelNotifications();
+        return (result ?? []) as CancelNotification[];
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 30000,
+  });
+}
+
+export function useMarkCancelNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      const actor = await getAdminActor();
+      return (actor as any).markCancelNotificationRead(id);
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["adminCancelNotifications"] }),
   });
 }
 

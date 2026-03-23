@@ -1,4 +1,16 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -10,10 +22,11 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useMyOrders } from "../hooks/useQueries";
+import { useCancelOrder, useMyOrders } from "../hooks/useQueries";
 
 const statusConfig: Record<
   string,
@@ -50,10 +63,13 @@ const statusConfig: Record<
   },
 };
 
+const cancellableStatuses = new Set(["Pending", "Confirmed"]);
+
 export default function OrdersPage() {
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
   const { data: orders, isLoading } = useMyOrders();
+  const cancelOrder = useCancelOrder();
 
   if (!identity) {
     navigate({ to: "/" });
@@ -63,6 +79,15 @@ export default function OrdersPage() {
   const sorted = [...(orders ?? [])].sort(
     (a, b) => Number(b.createdAt) - Number(a.createdAt),
   );
+
+  const handleCancel = async (orderId: bigint) => {
+    try {
+      await cancelOrder.mutateAsync(orderId);
+      toast.success("Order cancelled successfully");
+    } catch {
+      toast.error("Failed to cancel order");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -101,6 +126,7 @@ export default function OrdersPage() {
               const status = statusConfig[order.status] ?? statusConfig.Pending;
               const StatusIcon = status.icon;
               const date = new Date(Number(order.createdAt) / 1_000_000);
+              const canCancel = cancellableStatuses.has(order.status);
               return (
                 <motion.div
                   key={order.id.toString()}
@@ -131,13 +157,53 @@ export default function OrdersPage() {
                         })}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-primary text-lg">
-                        PKR {Number(order.totalAmount).toLocaleString()}
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="font-bold text-primary text-lg">
+                          PKR {Number(order.totalAmount).toLocaleString()}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {order.items.length} item(s)
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {order.items.length} item(s)
-                      </p>
+                      {canCancel && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              data-ocid={`orders.delete_button.${idx + 1}`}
+                              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Cancel Order
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent data-ocid="orders.dialog">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Cancel Order #{order.id.toString()}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to cancel Order #
+                                {order.id.toString()}? This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel data-ocid="orders.cancel_button">
+                                Keep Order
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                data-ocid="orders.confirm_button"
+                                onClick={() => handleCancel(order.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Yes, Cancel Order
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
 

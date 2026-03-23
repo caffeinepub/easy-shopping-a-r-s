@@ -1,6 +1,16 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "@tanstack/react-router";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  Bell,
+  CheckCheck,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -11,6 +21,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { resetAdminActor } from "../../hooks/useAdminActor";
+import {
+  useAdminCancelNotifications,
+  useMarkCancelNotificationRead,
+} from "../../hooks/useQueries";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
@@ -18,6 +32,118 @@ const navItems = [
   { to: "/admin/orders", icon: ShoppingBag, label: "Orders" },
   { to: "/admin/payments", icon: CreditCard, label: "Payment Settings" },
 ];
+
+function NotificationBell() {
+  const { data: notifications = [] } = useAdminCancelNotifications();
+  const markRead = useMarkCancelNotificationRead();
+  const [open, setOpen] = useState(false);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const handleMarkRead = (id: bigint) => {
+    markRead.mutate(id);
+  };
+
+  const handleMarkAllRead = () => {
+    const unread = notifications.filter((n) => !n.isRead);
+    for (const n of unread) {
+      markRead.mutate(n.id);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          data-ocid="admin.notification.button"
+          className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label="Notifications"
+        >
+          <Bell className="w-5 h-5 text-sidebar-foreground" />
+          {unreadCount > 0 && (
+            <Badge
+              data-ocid="admin.notification.toast"
+              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center bg-red-500 text-white text-xs rounded-full border-2 border-white"
+            >
+              {unreadCount}
+            </Badge>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        data-ocid="admin.notification.popover"
+        className="w-80 p-0"
+        align="end"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h3 className="font-semibold text-sm">Order Cancellations</h3>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleMarkAllRead}
+              data-ocid="admin.notification.secondary_button"
+              className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
+            >
+              <CheckCheck className="w-3 h-3 mr-1" />
+              Mark all read
+            </Button>
+          )}
+        </div>
+        <ScrollArea className="max-h-72">
+          {notifications.length === 0 ? (
+            <div
+              data-ocid="admin.notification.empty_state"
+              className="px-4 py-8 text-center text-sm text-muted-foreground"
+            >
+              No cancellation notifications
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {notifications.map((notif, idx) => {
+                const date = new Date(Number(notif.createdAt) / 1_000_000);
+                return (
+                  <div
+                    key={notif.id.toString()}
+                    data-ocid={`admin.notification.item.${idx + 1}`}
+                    className={`px-4 py-3 flex items-start justify-between gap-3 ${
+                      notif.isRead ? "opacity-60" : "bg-orange-50/50"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">
+                        Order #{notif.orderId.toString()} cancelled
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {date.toLocaleDateString("en-NP", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    {!notif.isRead && (
+                      <button
+                        type="button"
+                        data-ocid={`admin.notification.toggle.${idx + 1}`}
+                        onClick={() => handleMarkRead(notif.id)}
+                        className="shrink-0 text-xs text-primary hover:underline mt-0.5"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function AdminLayout({
   children,
@@ -94,12 +220,12 @@ export default function AdminLayout({
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="bg-white border-b border-border p-4 flex items-center gap-4 md:hidden">
+        <div className="bg-white border-b border-border p-4 flex items-center gap-4">
           <button
             type="button"
             data-ocid="admin.toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-muted"
+            className="p-2 rounded-lg hover:bg-muted md:hidden"
           >
             {sidebarOpen ? (
               <X className="w-5 h-5" />
@@ -107,7 +233,13 @@ export default function AdminLayout({
               <Menu className="w-5 h-5" />
             )}
           </button>
-          <span className="font-display font-bold">Admin Panel</span>
+          <span className="font-display font-bold md:block hidden">
+            Admin Panel
+          </span>
+          <span className="font-display font-bold md:hidden">Admin Panel</span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
 
         <main className="flex-1 p-6 overflow-auto">{children}</main>

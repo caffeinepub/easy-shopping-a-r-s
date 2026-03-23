@@ -63,7 +63,6 @@ actor {
     priceAtOrder : Nat;
   };
 
-  // V1 Order type (old format) - kept for stable memory migration only
   type OrderV1 = {
     id : Nat;
     buyerId : Principal;
@@ -73,7 +72,6 @@ actor {
     createdAt : Int;
   };
 
-  // Current Order type with payment fields
   public type Order = {
     id : Nat;
     buyerId : Principal;
@@ -103,23 +101,27 @@ actor {
     bankQrImageId : Text;
   };
 
+  public type CancelNotification = {
+    id : Nat;
+    orderId : Nat;
+    buyerPrincipal : Text;
+    createdAt : Int;
+    isRead : Bool;
+  };
+
   var nextProductId = 1;
   var nextOrderId = 1;
+  var nextCancelNotifId = 1;
   stable var paymentQRs : PaymentQRs = { esewaQrImageId = ""; bankQrImageId = "" };
 
   let products = Map.empty<Nat, Product>();
   let carts = Map.empty<Principal, List.List<CartItem>>();
-
-  // OLD orders map (V1 type) -- receives existing stable data on upgrade
   let orders = Map.empty<Nat, OrderV1>();
-
-  // NEW orders map (V2 type) -- used for all new reads/writes
   let ordersV2 = Map.empty<Nat, Order>();
-
   let userProfiles = Map.empty<Principal, UserProfileV1>();
   let userProfilesV2 = Map.empty<Principal, UserProfile>();
+  let cancelNotifications = Map.empty<Nat, CancelNotification>();
 
-  // Migrate old V1 orders into ordersV2 on upgrade
   system func postupgrade() {
     for (order in orders.values()) {
       ordersV2.add(order.id, {
@@ -380,6 +382,44 @@ actor {
     };
     carts.add(caller, List.empty<CartItem>());
     order.id;
+  };
+
+  public shared ({ caller }) func cancelOrder(orderId : Nat) : async () {
+    requireLoggedIn(caller);
+    let order = switch (ordersV2.get(orderId)) {
+      case (null) { Runtime.trap("Order not found") };
+      case (?ord) { ord };
+    };
+    if (order.buyerId != caller) {
+      Runtime.trap("You can only cancel your own orders");
+    };
+    if (order.status != "Pending" and order.status != "Confirmed") {
+      Runtime.trap("Order can only be cancelled when Pending or Confirmed");
+    };
+    let updatedOrder : Order = { order with status = "Cancelled" };
+    ordersV2.add(orderId, updatedOrder);
+    let notif : CancelNotification = {
+      id = nextCancelNotifId;
+      orderId;
+      buyerPrincipal = caller.toText();
+      createdAt = Time.now();
+      isRead = false;
+    };
+    cancelNotifications.add(nextCancelNotifId, notif);
+    nextCancelNotifId += 1;
+  };
+
+  public query func getAdminCancelNotifications() : async [CancelNotification] {
+    cancelNotifications.values().toArray();
+  };
+
+  public shared func markCancelNotificationRead(id : Nat) : async () {
+    switch (cancelNotifications.get(id)) {
+      case (null) {};
+      case (?notif) {
+        cancelNotifications.add(id, { notif with isRead = true });
+      };
+    };
   };
 
   public shared func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
