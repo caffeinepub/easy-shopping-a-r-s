@@ -13,15 +13,17 @@ import {
   ArrowLeft,
   Banknote,
   CreditCard,
+  ImageIcon,
   Loader2,
   Minus,
   Plus,
   QrCode,
   ShoppingBag,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
@@ -49,6 +51,8 @@ export default function CartPage() {
 
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [paymentScreenshot, setPaymentScreenshot] = useState<string>("");
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
 
   if (!identity) {
     navigate({ to: "/" });
@@ -94,12 +98,26 @@ export default function CartPage() {
     }
   };
 
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPaymentScreenshot(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleConfirmOrder = async () => {
     if (!cart || cart.length === 0) return;
     try {
-      const orderId = await placeOrder.mutateAsync();
+      const orderId = await placeOrder.mutateAsync({
+        paymentMethod: selectedPayment ?? "cod",
+        paymentScreenshotId: paymentScreenshot,
+      });
       toast.success(`Order #${orderId} placed successfully!`);
       setQrModalOpen(false);
+      setPaymentScreenshot("");
       navigate({ to: "/orders" });
     } catch {
       toast.error("Failed to place order");
@@ -108,6 +126,12 @@ export default function CartPage() {
 
   const handlePaymentSelect = (method: PaymentMethod) => {
     setSelectedPayment(method);
+    setPaymentScreenshot("");
+  };
+
+  const handleModalClose = (open: boolean) => {
+    setQrModalOpen(open);
+    if (!open) setPaymentScreenshot("");
   };
 
   const handleProceed = async () => {
@@ -116,7 +140,12 @@ export default function CartPage() {
       return;
     }
     if (selectedPayment === "cod") {
-      await handleConfirmOrder();
+      await placeOrder.mutateAsync({
+        paymentMethod: "cod",
+        paymentScreenshotId: "",
+      });
+      toast.success("Order placed successfully!");
+      navigate({ to: "/orders" });
     } else {
       setQrModalOpen(true);
     }
@@ -423,7 +452,7 @@ export default function CartPage() {
       <Footer />
 
       {/* QR Payment Modal */}
-      <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+      <Dialog open={qrModalOpen} onOpenChange={handleModalClose}>
         <DialogContent data-ocid="cart.dialog" className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -443,7 +472,8 @@ export default function CartPage() {
                   />
                 </div>
                 <p className="text-sm text-center text-muted-foreground">
-                  Scan the QR code and complete payment, then click{" "}
+                  Scan the QR code and complete payment, then upload your
+                  screenshot and click{" "}
                   <span className="font-semibold text-foreground">
                     Confirm Order
                   </span>
@@ -465,13 +495,68 @@ export default function CartPage() {
                 </p>
               </div>
             )}
+
+            {/* Screenshot Upload */}
+            <div className="w-full">
+              <p className="text-xs font-semibold mb-1">
+                Upload Payment Screenshot
+                <span className="font-normal text-muted-foreground ml-1">
+                  (Optional but recommended)
+                </span>
+              </p>
+              <input
+                ref={screenshotInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleScreenshotChange}
+              />
+              <button
+                type="button"
+                data-ocid="cart.upload_button"
+                onClick={() => screenshotInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-border rounded-xl p-3 flex items-center gap-3 hover:border-primary hover:bg-primary/5 transition-all"
+              >
+                {paymentScreenshot ? (
+                  <>
+                    <img
+                      src={paymentScreenshot}
+                      alt="Payment screenshot preview"
+                      className="w-14 h-14 rounded-lg object-cover border border-border shrink-0"
+                    />
+                    <div className="flex-1 text-left">
+                      <p className="text-xs font-semibold text-green-700">
+                        Screenshot uploaded ✓
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Click to change
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      <ImageIcon className="w-6 h-6 text-muted-foreground/50" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-xs font-semibold flex items-center gap-1">
+                        <Upload className="w-3 h-3" /> Tap to upload
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG accepted
+                      </p>
+                    </div>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           <DialogFooter className="gap-2">
             <Button
               data-ocid="cart.cancel_button"
               variant="outline"
-              onClick={() => setQrModalOpen(false)}
+              onClick={() => handleModalClose(false)}
             >
               Cancel
             </Button>

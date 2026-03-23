@@ -1,5 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -9,11 +15,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Principal } from "@icp-sdk/core/principal";
 import {
+  Banknote,
   CheckCircle,
   Clock,
+  CreditCard,
+  ImageIcon,
   MapPin,
   Package,
   Phone,
+  ShoppingBag,
   Truck,
   User,
   XCircle,
@@ -22,7 +32,12 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../../hooks/useActor";
-import { useAllOrders, useUpdateOrderStatus } from "../../hooks/useQueries";
+import {
+  useAllOrders,
+  useAllProductsAdmin,
+  useUpdateOrderStatus,
+} from "../../hooks/useQueries";
+import type { Product } from "../../hooks/useQueries";
 import AdminLayout from "./AdminLayout";
 
 const ORDER_STATUSES = [
@@ -44,6 +59,31 @@ const statusConfig: Record<
   Cancelled: { color: "bg-red-100 text-red-700", icon: XCircle },
 };
 
+const paymentMethodConfig: Record<
+  string,
+  {
+    label: string;
+    color: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }
+> = {
+  esewa: {
+    label: "eSewa",
+    color: "bg-green-100 text-green-700",
+    icon: ShoppingBag,
+  },
+  bank: {
+    label: "Bank Transfer",
+    color: "bg-blue-100 text-blue-700",
+    icon: CreditCard,
+  },
+  cod: {
+    label: "Cash on Delivery",
+    color: "bg-orange-100 text-orange-700",
+    icon: Banknote,
+  },
+};
+
 interface BuyerInfo {
   name: string;
   address: string;
@@ -57,8 +97,6 @@ function useBuyerProfiles(buyerIds: Principal[]) {
   const profilesRef = { current: profiles };
   profilesRef.current = profiles;
   const buyerIdStr = buyerIds.map((b) => b.toString()).join(",");
-  // Build map keyed by id string - stable across re-renders via closure ref
-  const idMapStr = buyerIdStr;
   const idMapRef: Record<string, Principal> = {};
   for (const p of buyerIds) {
     idMapRef[p.toString()] = p;
@@ -97,8 +135,8 @@ function useBuyerProfiles(buyerIds: Principal[]) {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: fetchProfiles and profilesRef.current are stable refs, not reactive values
   useEffect(() => {
-    if (!actor || !idMapStr) return;
-    const uniqueIds = [...new Set(idMapStr.split(",").filter(Boolean))];
+    if (!actor || !buyerIdStr) return;
+    const uniqueIds = [...new Set(buyerIdStr.split(",").filter(Boolean))];
     const missing = uniqueIds.filter((id) => !(id in profilesRef.current));
     if (missing.length === 0) return;
     fetchProfiles(actor, missing, idMapRef).then((results) => {
@@ -115,15 +153,24 @@ function useBuyerProfiles(buyerIds: Principal[]) {
         return updated;
       });
     });
-  }, [actor, idMapStr]);
+  }, [actor, buyerIdStr]);
 
   return profiles;
 }
 
 export default function AdminOrders() {
   const { data: orders, isLoading } = useAllOrders();
+  const { data: allProducts } = useAllProductsAdmin();
   const updateStatus = useUpdateOrderStatus();
   const [filterStatus, setFilterStatus] = useState("All");
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(
+    null,
+  );
+
+  const productMap: Record<string, Product> = {};
+  for (const p of allProducts ?? []) {
+    productMap[p.id.toString()] = p;
+  }
 
   const filtered = (orders ?? [])
     .filter((o) => filterStatus === "All" || o.status === filterStatus)
@@ -192,6 +239,17 @@ export default function AdminOrders() {
                 order.buyerId as unknown as Principal
               ).toString();
               const buyer = buyerProfiles[buyerId];
+              const paymentMethod =
+                ((order as any).paymentMethod as string) ?? "";
+              const paymentScreenshotId =
+                ((order as any).paymentScreenshotId as string) ?? "";
+              const pmCfg = paymentMethodConfig[paymentMethod] ?? {
+                label: paymentMethod || "Unknown",
+                color: "bg-gray-100 text-gray-700",
+                icon: Package,
+              };
+              const PaymentIcon = pmCfg.icon;
+
               return (
                 <motion.div
                   key={order.id.toString()}
@@ -305,18 +363,94 @@ export default function AdminOrders() {
                     )}
                   </div>
 
-                  {/* Ordered Items */}
-                  <div className="mt-3">
-                    <div className="flex flex-wrap gap-2">
-                      {order.items.map((item) => (
-                        <span
-                          key={item.productId.toString()}
-                          className="text-xs bg-muted px-2 py-1 rounded-full"
+                  {/* Ordered Items with product name + image */}
+                  <div className="mt-4 pt-3 border-t border-border">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                      Ordered Items
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {order.items.map((item) => {
+                        const product = productMap[item.productId.toString()];
+                        return (
+                          <div
+                            key={item.productId.toString()}
+                            className="flex items-center gap-2 bg-muted/50 rounded-xl px-3 py-2"
+                          >
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted shrink-0">
+                              {product?.imageId ? (
+                                <img
+                                  src={product.imageId}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="w-4 h-4 text-muted-foreground/50" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold line-clamp-1">
+                                {product?.name ??
+                                  `Product #${item.productId.toString()}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Qty: {Number(item.quantity)}
+                                {item.priceAtOrder
+                                  ? ` · Rs. ${Number(item.priceAtOrder).toLocaleString()}`
+                                  : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Payment Info */}
+                  <div className="mt-4 pt-3 border-t border-border">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                      Payment
+                    </p>
+                    <div className="flex items-start gap-4 flex-wrap">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${pmCfg.color}`}
+                      >
+                        <PaymentIcon className="w-3.5 h-3.5" />
+                        {pmCfg.label}
+                      </span>
+
+                      {paymentScreenshotId && (
+                        <button
+                          type="button"
+                          data-ocid={`admin.orders.open_modal_button.${idx + 1}`}
+                          onClick={() =>
+                            setScreenshotPreview(paymentScreenshotId)
+                          }
+                          className="flex items-center gap-2 bg-slate-50 border border-border rounded-xl px-3 py-2 hover:bg-slate-100 transition-colors"
                         >
-                          {Number(item.quantity)}x Product #
-                          {item.productId.toString()}
-                        </span>
-                      ))}
+                          <img
+                            src={paymentScreenshotId}
+                            alt="Payment screenshot"
+                            className="w-10 h-10 rounded-lg object-cover border border-border"
+                          />
+                          <div className="text-left">
+                            <p className="text-xs font-semibold">
+                              Payment Screenshot
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Click to view
+                            </p>
+                          </div>
+                        </button>
+                      )}
+
+                      {!paymentScreenshotId && paymentMethod !== "cod" && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <ImageIcon className="w-4 h-4" />
+                          No screenshot uploaded
+                        </div>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -325,6 +459,25 @@ export default function AdminOrders() {
           </div>
         )}
       </div>
+
+      {/* Screenshot Lightbox */}
+      <Dialog
+        open={!!screenshotPreview}
+        onOpenChange={(open) => !open && setScreenshotPreview(null)}
+      >
+        <DialogContent data-ocid="admin.orders.dialog" className="max-w-lg p-4">
+          <DialogHeader>
+            <DialogTitle>Payment Screenshot</DialogTitle>
+          </DialogHeader>
+          {screenshotPreview && (
+            <img
+              src={screenshotPreview}
+              alt="Payment screenshot full view"
+              className="w-full rounded-xl object-contain max-h-[70vh]"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

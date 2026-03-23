@@ -212,9 +212,12 @@ export function usePlaceOrder() {
   const { actor } = useActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      paymentMethod,
+      paymentScreenshotId,
+    }: { paymentMethod: string; paymentScreenshotId: string }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.placeOrder();
+      return (actor as any).placeOrder(paymentMethod, paymentScreenshotId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cart"] });

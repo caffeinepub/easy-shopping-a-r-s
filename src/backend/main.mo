@@ -19,7 +19,6 @@ actor {
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  // Kept for upgrade compatibility only - no longer used
   stable var ADMIN_PASSWORD : Text = "";
   stable var stableAdminPrincipal : ?Principal = null;
 
@@ -64,12 +63,25 @@ actor {
     priceAtOrder : Nat;
   };
 
+  // V1 Order type (old format) - kept for stable memory migration only
+  type OrderV1 = {
+    id : Nat;
+    buyerId : Principal;
+    items : [CartItem];
+    totalAmount : Nat;
+    status : Text;
+    createdAt : Int;
+  };
+
+  // Current Order type with payment fields
   public type Order = {
     id : Nat;
     buyerId : Principal;
     items : [CartItem];
     totalAmount : Nat;
     status : Text;
+    paymentMethod : Text;
+    paymentScreenshotId : Text;
     createdAt : Int;
   };
 
@@ -93,14 +105,35 @@ actor {
 
   var nextProductId = 1;
   var nextOrderId = 1;
-  // Stable so payment QR codes persist across upgrades
   stable var paymentQRs : PaymentQRs = { esewaQrImageId = ""; bankQrImageId = "" };
 
   let products = Map.empty<Nat, Product>();
   let carts = Map.empty<Principal, List.List<CartItem>>();
-  let orders = Map.empty<Nat, Order>();
+
+  // OLD orders map (V1 type) -- receives existing stable data on upgrade
+  let orders = Map.empty<Nat, OrderV1>();
+
+  // NEW orders map (V2 type) -- used for all new reads/writes
+  let ordersV2 = Map.empty<Nat, Order>();
+
   let userProfiles = Map.empty<Principal, UserProfileV1>();
   let userProfilesV2 = Map.empty<Principal, UserProfile>();
+
+  // Migrate old V1 orders into ordersV2 on upgrade
+  system func postupgrade() {
+    for (order in orders.values()) {
+      ordersV2.add(order.id, {
+        id = order.id;
+        buyerId = order.buyerId;
+        items = order.items;
+        totalAmount = order.totalAmount;
+        status = order.status;
+        paymentMethod = "Cash on Delivery";
+        paymentScreenshotId = "";
+        createdAt = order.createdAt;
+      });
+    };
+  };
 
   func requireLoggedIn(caller : Principal) {
     if (caller.isAnonymous()) {
@@ -298,7 +331,7 @@ actor {
     };
   };
 
-  public shared ({ caller }) func placeOrder() : async Nat {
+  public shared ({ caller }) func placeOrder(paymentMethod : Text, paymentScreenshotId : Text) : async Nat {
     requireLoggedIn(caller);
     let cart = switch (carts.get(caller)) {
       case (null) { List.empty<CartItem>() };
@@ -331,9 +364,11 @@ actor {
       items = validatedItems.toArray();
       totalAmount;
       status = "Pending";
+      paymentMethod;
+      paymentScreenshotId;
       createdAt = Time.now();
     };
-    orders.add(nextOrderId, order);
+    ordersV2.add(nextOrderId, order);
     nextOrderId += 1;
     for (item in validatedItems.values()) {
       let product = switch (products.get(item.productId)) {
@@ -348,21 +383,21 @@ actor {
   };
 
   public shared func updateOrderStatus(orderId : Nat, newStatus : Text) : async () {
-    let order = switch (orders.get(orderId)) {
+    let order = switch (ordersV2.get(orderId)) {
       case (null) { Runtime.trap("Order not found") };
       case (?ord) { ord };
     };
     let updatedOrder : Order = { order with status = newStatus };
-    orders.add(orderId, updatedOrder);
+    ordersV2.add(orderId, updatedOrder);
   };
 
   public query ({ caller }) func getMyOrders() : async [Order] {
     requireLoggedIn(caller);
-    orders.values().toArray().filter(func(o) { o.buyerId == caller });
+    ordersV2.values().toArray().filter(func(o) { o.buyerId == caller });
   };
 
   public query func getAllOrders() : async [Order] {
-    orders.values().toArray();
+    ordersV2.values().toArray();
   };
 
   public query func getInsights() : async {
@@ -372,7 +407,7 @@ actor {
     completedOrders : Nat;
     cancelledOrders : Nat;
   } {
-    let allOrders = orders.values().toArray();
+    let allOrders = ordersV2.values().toArray();
     let totalOrders = allOrders.size();
     let pendingOrders = allOrders.filter(func(order) { order.status == "Pending" }).size();
     let processingOrders = allOrders.filter(func(order) { order.status == "Processing" }).size();
