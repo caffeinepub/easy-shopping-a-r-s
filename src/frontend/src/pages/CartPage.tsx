@@ -140,12 +140,16 @@ export default function CartPage() {
       return;
     }
     if (selectedPayment === "cod") {
-      await placeOrder.mutateAsync({
-        paymentMethod: "cod",
-        paymentScreenshotId: "",
-      });
-      toast.success("Order placed successfully!");
-      navigate({ to: "/orders" });
+      try {
+        const orderId = await placeOrder.mutateAsync({
+          paymentMethod: "cod",
+          paymentScreenshotId: "",
+        });
+        toast.success(`Order #${orderId} placed successfully!`);
+        navigate({ to: "/orders" });
+      } catch {
+        toast.error("Failed to place order. Please try again.");
+      }
     } else {
       setQrModalOpen(true);
     }
@@ -425,10 +429,13 @@ export default function CartPage() {
                 <Button
                   data-ocid="cart.submit_button"
                   onClick={handleProceed}
-                  disabled={!selectedPayment || placeOrder.isPending}
+                  disabled={
+                    !selectedPayment ||
+                    (placeOrder.isPending && selectedPayment === "cod")
+                  }
                   className="w-full bg-primary hover:bg-primary/90 h-12 text-base font-semibold"
                 >
-                  {placeOrder.isPending ? (
+                  {placeOrder.isPending && selectedPayment === "cod" ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Placing Order...
