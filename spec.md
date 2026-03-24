@@ -1,32 +1,32 @@
 # Easy Shopping A.R.S
 
 ## Current State
-Buyers can place orders and view their order history. Admins can view and update order statuses. There is no way for buyers to cancel orders, and no admin notification system exists.
+The app has a full e-commerce platform with:
+- Admin panel with product management, order management, payment QR settings
+- Buyer features: browsing, cart, order placement with eSewa/Bank/COD payment options
+- Buyers can upload payment screenshots for eSewa/Bank orders
+- Admin can see order details (buyer name, address, phone, product, payment screenshot)
+- Order status: admin can call `updateOrderStatus` to set any status
+- Buyers can cancel Pending/Confirmed orders; admin receives cancellation notifications
 
 ## Requested Changes (Diff)
 
 ### Add
-- `cancelOrder(orderId)` backend function: buyer can cancel their own order only if status is Pending or Confirmed
-- `CancelNotification` type and stable storage in backend
-- `getAdminCancelNotifications()` backend query for admin to fetch cancel notifications
-- `markCancelNotificationRead(id)` backend function to mark a notification as read
-- Cancel button on OrdersPage for buyer orders with status Pending or Confirmed
-- Confirmation dialog before cancellation
-- Admin notification bell in AdminLayout header showing unread cancel notifications
-- Notifications panel/dropdown showing which orders were cancelled by buyers
+- "Confirm Payment" button in admin Orders panel for eSewa and Bank QR orders (only shown when status is "Pending")
+- "Confirm Order" button in admin Orders panel for Cash on Delivery orders (only shown when status is "Pending")
+- Buyer order tracking page shows updated status so buyer is notified when admin confirms
 
 ### Modify
-- OrdersPage: show cancel button on orders that are Pending or Confirmed
-- AdminLayout: add notification bell icon with unread count badge
-- AdminOrders: highlight recently cancelled orders
+- Admin Orders UI: Show payment method label clearly on each order card
+- Admin Orders UI: For Pending eSewa/Bank orders, show "Confirm Payment" CTA prominently near screenshot
+- Admin Orders UI: For Pending COD orders, show "Confirm Order" CTA
+- After admin confirms: order status changes to "Confirmed", buyer sees "Confirmed" in their order tracking
+- Order status flow enforced in UI: Pending → Confirmed → Shipped → Delivered
 
 ### Remove
 - Nothing removed
 
 ## Implementation Plan
-1. Add `CancelNotification` type to backend with fields: id, orderId, buyerName, createdAt, isRead
-2. Add `cancelOrder` function: verifies caller owns the order, status is Pending or Confirmed, sets status to Cancelled, creates a notification
-3. Add `getAdminCancelNotifications` and `markCancelNotificationRead` backend functions
-4. Add `useCancelOrder`, `useAdminCancelNotifications`, `useMarkCancelNotificationRead` hooks to useQueries.ts
-5. Update OrdersPage to show a Cancel button with confirmation for Pending/Confirmed orders
-6. Update AdminLayout to show a notification bell with unread badge; clicking shows notification list
+1. Update AdminOrders page: add "Confirm Payment" button for eSewa/Bank pending orders, "Confirm Order" for COD pending orders -- both call `updateOrderStatus(id, "Confirmed")`
+2. Update buyer OrdersPage: show status clearly with color coding so buyer sees Confirmed/Shipped/Delivered updates
+3. Ensure the existing `updateOrderStatus` backend function is used for the confirm actions

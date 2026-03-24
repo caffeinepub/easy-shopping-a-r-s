@@ -15,9 +15,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  Banknote,
   CheckCircle,
   Clock,
+  CreditCard,
   Package,
+  ShoppingBag,
   Truck,
   XCircle,
 } from "lucide-react";
@@ -41,8 +44,13 @@ const statusConfig: Record<
     icon: Clock,
     label: "Pending",
   },
-  Processing: {
+  Confirmed: {
     color: "bg-blue-100 text-blue-700",
+    icon: CheckCircle,
+    label: "Confirmed - Processing",
+  },
+  Processing: {
+    color: "bg-indigo-100 text-indigo-700",
     icon: Package,
     label: "Processing",
   },
@@ -61,6 +69,15 @@ const statusConfig: Record<
     icon: XCircle,
     label: "Cancelled",
   },
+};
+
+const paymentMethodLabels: Record<
+  string,
+  { label: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  esewa: { label: "Paid via eSewa", icon: ShoppingBag },
+  bank: { label: "Paid via Bank Transfer", icon: CreditCard },
+  cod: { label: "Cash on Delivery", icon: Banknote },
 };
 
 const cancellableStatuses = new Set(["Pending", "Confirmed"]);
@@ -127,6 +144,10 @@ export default function OrdersPage() {
               const StatusIcon = status.icon;
               const date = new Date(Number(order.createdAt) / 1_000_000);
               const canCancel = cancellableStatuses.has(order.status);
+              const paymentMethod =
+                ((order as any).paymentMethod as string) ?? "";
+              const pmInfo = paymentMethodLabels[paymentMethod];
+              const PaymentMethodIcon = pmInfo?.icon;
               return (
                 <motion.div
                   key={order.id.toString()}
@@ -138,7 +159,7 @@ export default function OrdersPage() {
                 >
                   <div className="flex items-start justify-between flex-wrap gap-4">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-foreground">
                           Order #{order.id.toString()}
                         </h3>
@@ -156,11 +177,17 @@ export default function OrdersPage() {
                           day: "numeric",
                         })}
                       </p>
+                      {pmInfo && (
+                        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground">
+                          <PaymentMethodIcon className="w-3.5 h-3.5" />
+                          <span>{pmInfo.label}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <div className="font-bold text-primary text-lg">
-                          PKR {Number(order.totalAmount).toLocaleString()}
+                          Rs. {Number(order.totalAmount).toLocaleString()}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {order.items.length} item(s)
@@ -206,6 +233,17 @@ export default function OrdersPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Payment Confirmed Message */}
+                  {order.status === "Confirmed" && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-lg px-4 py-2.5">
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                      <span>
+                        Your payment has been confirmed! Your order is now being
+                        processed.
+                      </span>
+                    </div>
+                  )}
 
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="flex flex-wrap gap-2">

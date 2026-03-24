@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Principal } from "@icp-sdk/core/principal";
 import {
+  AlertTriangle,
   Banknote,
   CheckCircle,
   Clock,
@@ -42,6 +44,7 @@ import AdminLayout from "./AdminLayout";
 
 const ORDER_STATUSES = [
   "Pending",
+  "Confirmed",
   "Processing",
   "Shipped",
   "Delivered",
@@ -53,7 +56,8 @@ const statusConfig: Record<
   { color: string; icon: React.ComponentType<{ className?: string }> }
 > = {
   Pending: { color: "bg-yellow-100 text-yellow-700", icon: Clock },
-  Processing: { color: "bg-blue-100 text-blue-700", icon: Package },
+  Confirmed: { color: "bg-blue-100 text-blue-700", icon: Package },
+  Processing: { color: "bg-indigo-100 text-indigo-700", icon: Package },
   Shipped: { color: "bg-purple-100 text-purple-700", icon: Truck },
   Delivered: { color: "bg-green-100 text-green-700", icon: CheckCircle },
   Cancelled: { color: "bg-red-100 text-red-700", icon: XCircle },
@@ -179,10 +183,14 @@ export default function AdminOrders() {
   const buyerIds = (orders ?? []).map((o) => o.buyerId as unknown as Principal);
   const buyerProfiles = useBuyerProfiles(buyerIds);
 
-  const handleStatusChange = async (orderId: bigint, newStatus: string) => {
+  const handleStatusChange = async (
+    orderId: bigint,
+    newStatus: string,
+    successMsg?: string,
+  ) => {
     try {
       await updateStatus.mutateAsync({ orderId, status: newStatus });
-      toast.success("Order status updated");
+      toast.success(successMsg ?? "Order status updated");
     } catch {
       toast.error("Failed to update order status");
     }
@@ -249,6 +257,10 @@ export default function AdminOrders() {
                 icon: Package,
               };
               const PaymentIcon = pmCfg.icon;
+              const isPending = order.status === "Pending";
+              const isOnlinePayment =
+                paymentMethod === "esewa" || paymentMethod === "bank";
+              const isCOD = paymentMethod === "cod";
 
               return (
                 <motion.div
@@ -446,12 +458,56 @@ export default function AdminOrders() {
                       )}
 
                       {!paymentScreenshotId && paymentMethod !== "cod" && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <ImageIcon className="w-4 h-4" />
-                          No screenshot uploaded
+                        <div className="flex items-center gap-2 text-xs text-yellow-600 bg-yellow-50 px-3 py-2 rounded-lg">
+                          <AlertTriangle className="w-4 h-4" />
+                          Waiting for payment verification — no screenshot
+                          uploaded yet
                         </div>
                       )}
                     </div>
+
+                    {/* Confirm Action Buttons for Pending Orders */}
+                    {isPending && isOnlinePayment && (
+                      <div className="mt-3">
+                        <Button
+                          data-ocid={`admin.orders.confirm_button.${idx + 1}`}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                          onClick={() =>
+                            handleStatusChange(
+                              order.id,
+                              "Confirmed",
+                              "Payment confirmed",
+                            )
+                          }
+                          disabled={updateStatus.isPending}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Confirm Payment
+                        </Button>
+                      </div>
+                    )}
+
+                    {isPending && isCOD && (
+                      <div className="mt-3">
+                        <Button
+                          data-ocid={`admin.orders.confirm_button.${idx + 1}`}
+                          size="sm"
+                          className="bg-orange-500 hover:bg-orange-600 text-white gap-2"
+                          onClick={() =>
+                            handleStatusChange(
+                              order.id,
+                              "Confirmed",
+                              "Order confirmed",
+                            )
+                          }
+                          disabled={updateStatus.isPending}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Confirm Order
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
