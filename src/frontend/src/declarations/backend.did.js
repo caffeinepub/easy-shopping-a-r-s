@@ -57,6 +57,8 @@ export const Order = IDL.Record({
   'totalAmount' : IDL.Nat,
   'buyerId' : IDL.Principal,
   'items' : IDL.Vec(CartItem),
+  'paymentMethod' : IDL.Text,
+  'paymentScreenshotId' : IDL.Text,
 });
 export const UserProfile = IDL.Record({
   'name' : IDL.Text,
@@ -77,6 +79,13 @@ export const ProductUpdateInput = IDL.Record({
 export const PaymentQRs = IDL.Record({
   'esewaQrImageId' : IDL.Text,
   'bankQrImageId' : IDL.Text,
+});
+export const CancelNotification = IDL.Record({
+  'id' : IDL.Nat,
+  'orderId' : IDL.Nat,
+  'buyerPrincipal' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'isRead' : IDL.Bool,
 });
 
 export const idlService = IDL.Service({
@@ -109,6 +118,7 @@ export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addToCart' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'cancelOrder' : IDL.Func([IDL.Nat], [], []),
   'clearCart' : IDL.Func([], [], []),
   'createProduct' : IDL.Func(
       [ProductInput],
@@ -116,6 +126,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'getActiveProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+  'getAdminCancelNotifications' : IDL.Func([], [IDL.Vec(CancelNotification)], ['query']),
   'getAllOrders' : IDL.Func(
       [],
       [IDL.Vec(Order)],
@@ -152,7 +163,8 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'loginAsAdmin' : IDL.Func([IDL.Text], [IDL.Bool], []),
-  'placeOrder' : IDL.Func([], [IDL.Nat], []),
+  'markCancelNotificationRead' : IDL.Func([IDL.Nat], [], []),
+  'placeOrder' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
   'removeCartItem' : IDL.Func([IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setPaymentQRs' : IDL.Func([IDL.Text, IDL.Text], [], []),
@@ -231,6 +243,8 @@ export const idlFactory = ({ IDL }) => {
     'totalAmount' : IDL.Nat,
     'buyerId' : IDL.Principal,
     'items' : IDL.Vec(CartItem),
+    'paymentMethod' : IDL.Text,
+    'paymentScreenshotId' : IDL.Text,
   });
   const UserProfile = IDL.Record({
     'name' : IDL.Text,
@@ -251,6 +265,13 @@ export const idlFactory = ({ IDL }) => {
   const PaymentQRs = IDL.Record({
     'esewaQrImageId' : IDL.Text,
     'bankQrImageId' : IDL.Text,
+  });
+  const CancelNotification = IDL.Record({
+    'id' : IDL.Nat,
+    'orderId' : IDL.Nat,
+    'buyerPrincipal' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'isRead' : IDL.Bool,
   });
   
   return IDL.Service({
@@ -283,6 +304,7 @@ export const idlFactory = ({ IDL }) => {
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addToCart' : IDL.Func([IDL.Nat, IDL.Nat], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'cancelOrder' : IDL.Func([IDL.Nat], [], []),
     'clearCart' : IDL.Func([], [], []),
     'createProduct' : IDL.Func(
         [ProductInput],
@@ -290,6 +312,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'getActiveProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+    'getAdminCancelNotifications' : IDL.Func([], [IDL.Vec(CancelNotification)], ['query']),
     'getAllOrders' : IDL.Func(
         [],
         [IDL.Vec(Order)],
@@ -326,7 +349,8 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'loginAsAdmin' : IDL.Func([IDL.Text], [IDL.Bool], []),
-    'placeOrder' : IDL.Func([], [IDL.Nat], []),
+    'markCancelNotificationRead' : IDL.Func([IDL.Nat], [], []),
+    'placeOrder' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
     'removeCartItem' : IDL.Func([IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setPaymentQRs' : IDL.Func([IDL.Text, IDL.Text], [], []),

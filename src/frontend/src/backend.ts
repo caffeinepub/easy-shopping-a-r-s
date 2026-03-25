@@ -139,15 +139,25 @@ export interface Order {
     totalAmount: bigint;
     buyerId: Principal;
     items: Array<CartItem>;
+    paymentMethod: string;
+    paymentScreenshotId: string;
 }
 export interface UserProfile {
     name: string;
     email: string;
     address: string;
+    phone: string;
 }
 export interface _CaffeineStorageRefillResult {
     success?: boolean;
     topped_up_amount?: bigint;
+}
+export interface CancelNotification {
+    id: bigint;
+    orderId: bigint;
+    buyerPrincipal: string;
+    createdAt: bigint;
+    isRead: boolean;
 }
 export enum UserRole {
     admin = "admin",
@@ -185,7 +195,10 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     loginAsAdmin(password: string): Promise<boolean>;
-    placeOrder(): Promise<bigint>;
+    cancelOrder(orderId: bigint): Promise<void>;
+    getAdminCancelNotifications(): Promise<Array<CancelNotification>>;
+    markCancelNotificationRead(id: bigint): Promise<void>;
+    placeOrder(paymentMethod: string, paymentScreenshotId: string): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setPaymentQRs(esewaQrImageId: string, bankQrImageId: string): Promise<void>;
@@ -540,17 +553,59 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async placeOrder(): Promise<bigint> {
+    async cancelOrder(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.placeOrder();
+                const result = await this.actor.cancelOrder(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.placeOrder();
+            const result = await this.actor.cancelOrder(arg0);
+            return result;
+        }
+    }
+    async getAdminCancelNotifications(): Promise<Array<CancelNotification>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAdminCancelNotifications();
+                return result as Array<CancelNotification>;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAdminCancelNotifications();
+            return result as Array<CancelNotification>;
+        }
+    }
+    async markCancelNotificationRead(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.markCancelNotificationRead(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.markCancelNotificationRead(arg0);
+            return result;
+        }
+    }
+    async placeOrder(arg0: string, arg1: string): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.placeOrder(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.placeOrder(arg0, arg1);
             return result;
         }
     }

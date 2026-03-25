@@ -50,6 +50,15 @@ export interface Order {
     totalAmount: bigint;
     buyerId: Principal;
     items: Array<CartItem>;
+    paymentMethod: string;
+    paymentScreenshotId: string;
+}
+export interface CancelNotification {
+    id: bigint;
+    orderId: bigint;
+    buyerPrincipal: string;
+    createdAt: bigint;
+    isRead: boolean;
 }
 export interface UserProfile {
     name: string;
@@ -69,9 +78,11 @@ export interface PaymentQRs {
 export interface backendInterface {
     addToCart(productId: bigint, quantity: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    cancelOrder(orderId: bigint): Promise<void>;
     clearCart(): Promise<void>;
     createProduct(newProduct: ProductInput): Promise<bigint>;
     getActiveProducts(): Promise<Array<Product>>;
+    getAdminCancelNotifications(): Promise<Array<CancelNotification>>;
     getAllOrders(): Promise<Array<Order>>;
     getAllProductsAdmin(): Promise<Array<Product>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -89,7 +100,8 @@ export interface backendInterface {
     getProduct(productId: bigint): Promise<Product>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    placeOrder(): Promise<bigint>;
+    markCancelNotificationRead(id: bigint): Promise<void>;
+    placeOrder(paymentMethod: string, paymentScreenshotId: string): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setPaymentQRs(esewaQrImageId: string, bankQrImageId: string): Promise<void>;
@@ -98,4 +110,6 @@ export interface backendInterface {
     updateOrderStatus(orderId: bigint, newStatus: string): Promise<void>;
     updateProduct(productUpdate: ProductUpdateInput): Promise<void>;
     updateProductStock(id: bigint, newQty: bigint): Promise<void>;
+    _initializeAccessControlWithSecret(secret: string): Promise<void>;
+    _caffeineStorageCreateCertificate(blobHash: string): Promise<{ method: string; blob_hash: string }>;
 }

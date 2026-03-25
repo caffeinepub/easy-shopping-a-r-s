@@ -247,10 +247,8 @@ export default function AdminOrders() {
                 order.buyerId as unknown as Principal
               ).toString();
               const buyer = buyerProfiles[buyerId];
-              const paymentMethod =
-                ((order as any).paymentMethod as string) ?? "";
-              const paymentScreenshotId =
-                ((order as any).paymentScreenshotId as string) ?? "";
+              const paymentMethod = order.paymentMethod ?? "";
+              const paymentScreenshotId = order.paymentScreenshotId ?? "";
               const pmCfg = paymentMethodConfig[paymentMethod] ?? {
                 label: paymentMethod || "Unknown",
                 color: "bg-gray-100 text-gray-700",

@@ -108,8 +108,8 @@ export default function AdminProducts() {
       setForm((prev) => ({ ...prev, imageId: url }));
       setImagePreview(url);
       toast.success("Image uploaded!");
-    } catch {
-      toast.error("Image upload failed");
+    } catch (err) {
+      toast.error(`Image upload failed: ${err}`);
     }
   };
 

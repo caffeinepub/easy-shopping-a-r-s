@@ -1,32 +1,28 @@
 # Easy Shopping A.R.S
 
 ## Current State
-The app has a full e-commerce platform with:
-- Admin panel with product management, order management, payment QR settings
-- Buyer features: browsing, cart, order placement with eSewa/Bank/COD payment options
-- Buyers can upload payment screenshots for eSewa/Bank orders
-- Admin can see order details (buyer name, address, phone, product, payment screenshot)
-- Order status: admin can call `updateOrderStatus` to set any status
-- Buyers can cancel Pending/Confirmed orders; admin receives cancellation notifications
+The app has two reported broken features:
+1. Cash on Delivery orders fail silently — the `placeOrder` Candid IDL declares zero arguments but the backend requires `(paymentMethod: Text, paymentScreenshotId: Text)`. The actor encodes no args, canister returns a Candid decode error, cart catch block shows generic toast.
+2. Admin product photo update — image upload error details are swallowed, admin sees generic "Image upload failed" with no actionable info.
 
 ## Requested Changes (Diff)
 
 ### Add
-- "Confirm Payment" button in admin Orders panel for eSewa and Bank QR orders (only shown when status is "Pending")
-- "Confirm Order" button in admin Orders panel for Cash on Delivery orders (only shown when status is "Pending")
-- Buyer order tracking page shows updated status so buyer is notified when admin confirms
+- Specific error messages for image upload and product save failures in AdminProducts
 
 ### Modify
-- Admin Orders UI: Show payment method label clearly on each order card
-- Admin Orders UI: For Pending eSewa/Bank orders, show "Confirm Payment" CTA prominently near screenshot
-- Admin Orders UI: For Pending COD orders, show "Confirm Order" CTA
-- After admin confirms: order status changes to "Confirmed", buyer sees "Confirmed" in their order tracking
-- Order status flow enforced in UI: Pending → Confirmed → Shipped → Delivered
+- `backend.did.js`: Fix `placeOrder` in both IDL service definitions from `IDL.Func([], [IDL.Nat], [])` to `IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], [])`
+- `backend.did.d.ts`: Fix `'placeOrder'` from `ActorMethod<[], bigint>` to `ActorMethod<[string, string], bigint>`
+- `backend.d.ts`: Fix `placeOrder()` to `placeOrder(paymentMethod: string, paymentScreenshotId: string): Promise<bigint>`
+- `useQueries.ts`: Update `usePlaceOrder` to call `actor.placeOrder(paymentMethod, paymentScreenshotId)` with proper typing (no `as any` workaround needed after type fix)
+- `AdminProducts.tsx`: Show actual error in `catch (err)` for both image upload and product save
 
 ### Remove
 - Nothing removed
 
 ## Implementation Plan
-1. Update AdminOrders page: add "Confirm Payment" button for eSewa/Bank pending orders, "Confirm Order" for COD pending orders -- both call `updateOrderStatus(id, "Confirmed")`
-2. Update buyer OrdersPage: show status clearly with color coding so buyer sees Confirmed/Shipped/Delivered updates
-3. Ensure the existing `updateOrderStatus` backend function is used for the confirm actions
+1. Fix `placeOrder` IDL in `backend.did.js` (2 occurrences)
+2. Fix `placeOrder` type in `backend.did.d.ts`
+3. Fix `placeOrder` interface in `backend.d.ts`
+4. Update `usePlaceOrder` in `useQueries.ts` to use proper typing
+5. Add specific error messages in `AdminProducts.tsx` for upload and save failures

@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CartItem, Order, Product, UserProfile } from "../backend";
+import type {
+  CancelNotification,
+  CartItem,
+  Order,
+  Product,
+  UserProfile,
+} from "../backend";
 import { UserRole } from "../backend";
 import { useActor } from "./useActor";
 import { getAdminActor } from "./useAdminActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
-export type { Product, CartItem, Order, UserProfile };
+export type { Product, CartItem, Order, UserProfile, CancelNotification };
 export { UserRole };
 
 // Extended profile type that includes phone (supported by backend but not in generated types)
@@ -16,14 +22,6 @@ export interface BuyerProfile extends UserProfile {
 export interface PaymentQRs {
   esewaQrImageId: string;
   bankQrImageId: string;
-}
-
-export interface CancelNotification {
-  id: bigint;
-  orderId: bigint;
-  buyerPrincipal: string;
-  createdAt: bigint;
-  isRead: boolean;
 }
 
 export function useUserRole() {
@@ -225,7 +223,7 @@ export function usePlaceOrder() {
       paymentScreenshotId,
     }: { paymentMethod: string; paymentScreenshotId: string }) => {
       if (!actor) throw new Error("Not connected");
-      return (actor as any).placeOrder(paymentMethod, paymentScreenshotId);
+      return actor.placeOrder(paymentMethod, paymentScreenshotId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cart"] });
@@ -240,7 +238,7 @@ export function useCancelOrder() {
   return useMutation({
     mutationFn: async (orderId: bigint) => {
       if (!actor) throw new Error("Not connected");
-      return (actor as any).cancelOrder(orderId);
+      return actor.cancelOrder(orderId);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myOrders"] }),
   });
@@ -252,7 +250,7 @@ export function useAdminCancelNotifications() {
     queryFn: async () => {
       try {
         const actor = await getAdminActor();
-        const result = await (actor as any).getAdminCancelNotifications();
+        const result = await actor.getAdminCancelNotifications();
         return (result ?? []) as CancelNotification[];
       } catch {
         return [];
@@ -267,7 +265,7 @@ export function useMarkCancelNotificationRead() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       const actor = await getAdminActor();
-      return (actor as any).markCancelNotificationRead(id);
+      return actor.markCancelNotificationRead(id);
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["adminCancelNotifications"] }),
@@ -286,7 +284,6 @@ export function useCreateProduct() {
       imageId: string;
       stockQty: bigint;
     }) => {
-      // Always get a fresh actor with admin role registered before mutating
       const actor = await getAdminActor();
       return actor.createProduct({
         name: data.name,

@@ -15,6 +15,13 @@ export interface CartItem {
   'quantity' : bigint,
   'priceAtOrder' : bigint,
 }
+export interface CancelNotification {
+  'id' : bigint,
+  'orderId' : bigint,
+  'buyerPrincipal' : string,
+  'createdAt' : bigint,
+  'isRead' : boolean,
+}
 export interface Order {
   'id' : bigint,
   'status' : string,
@@ -22,6 +29,8 @@ export interface Order {
   'totalAmount' : bigint,
   'buyerId' : Principal,
   'items' : Array<CartItem>,
+  'paymentMethod' : string,
+  'paymentScreenshotId' : string,
 }
 export interface PaymentQRs {
   'esewaQrImageId' : string,
@@ -97,9 +106,11 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addToCart' : ActorMethod<[bigint, bigint], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'cancelOrder' : ActorMethod<[bigint], undefined>,
   'clearCart' : ActorMethod<[], undefined>,
   'createProduct' : ActorMethod<[ProductInput], bigint>,
   'getActiveProducts' : ActorMethod<[], Array<Product>>,
+  'getAdminCancelNotifications' : ActorMethod<[], Array<CancelNotification>>,
   'getAllOrders' : ActorMethod<[], Array<Order>>,
   'getAllProductsAdmin' : ActorMethod<[], Array<Product>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -121,7 +132,8 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'loginAsAdmin' : ActorMethod<[string], boolean>,
-  'placeOrder' : ActorMethod<[], bigint>,
+  'markCancelNotificationRead' : ActorMethod<[bigint], undefined>,
+  'placeOrder' : ActorMethod<[string, string], bigint>,
   'removeCartItem' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setPaymentQRs' : ActorMethod<[string, string], undefined>,
