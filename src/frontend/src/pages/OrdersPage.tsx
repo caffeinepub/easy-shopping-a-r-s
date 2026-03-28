@@ -143,6 +143,15 @@ export default function OrdersPage() {
               const status = statusConfig[order.status] ?? statusConfig.Pending;
               const StatusIcon = status.icon;
               const date = new Date(Number(order.createdAt) / 1_000_000);
+              const deliveryDate = new Date(
+                Number(order.createdAt) / 1_000_000,
+              );
+              deliveryDate.setDate(deliveryDate.getDate() + 5);
+              const deliveryDateStr = deliveryDate.toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              });
               const canCancel = cancellableStatuses.has(order.status);
               const paymentMethod =
                 ((order as any).paymentMethod as string) ?? "";
@@ -244,6 +253,15 @@ export default function OrdersPage() {
                       </span>
                     </div>
                   )}
+
+                  {/* Delivery Estimate */}
+                  {order.status !== "Cancelled" &&
+                    order.status !== "Delivered" && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-4 py-2.5">
+                        <Truck className="w-4 h-4 shrink-0" />
+                        <span>Estimated delivery: {deliveryDateStr}</span>
+                      </div>
+                    )}
 
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="flex flex-wrap gap-2">

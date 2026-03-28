@@ -20,6 +20,7 @@ import {
   QrCode,
   ShoppingBag,
   Trash2,
+  Truck,
   Upload,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -38,6 +39,16 @@ import {
 } from "../hooks/useQueries";
 
 type PaymentMethod = "esewa" | "bank" | "cod" | null;
+
+function getEstimatedDeliveryDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 5);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export default function CartPage() {
   const navigate = useNavigate();
@@ -74,6 +85,8 @@ export default function CartPage() {
     const finalPrice = discount > 0 ? price * (1 - discount / 100) : price;
     return sum + finalPrice * Number(item.quantity);
   }, 0);
+
+  const deliveryDateStr = getEstimatedDeliveryDate();
 
   const handleUpdateQty = async (
     productId: bigint,
@@ -115,7 +128,10 @@ export default function CartPage() {
         paymentMethod: selectedPayment ?? "cod",
         paymentScreenshotId: paymentScreenshot,
       });
-      toast.success(`Order #${orderId} placed successfully!`);
+      const formattedDate = getEstimatedDeliveryDate();
+      toast.success(
+        `Order #${orderId} placed! Estimated delivery: ${formattedDate}.`,
+      );
       setQrModalOpen(false);
       setPaymentScreenshot("");
       navigate({ to: "/orders" });
@@ -145,7 +161,10 @@ export default function CartPage() {
           paymentMethod: "cod",
           paymentScreenshotId: "",
         });
-        toast.success(`Order #${orderId} placed successfully!`);
+        const formattedDate = getEstimatedDeliveryDate();
+        toast.success(
+          `Order #${orderId} placed! Estimated delivery: ${formattedDate}.`,
+        );
         navigate({ to: "/orders" });
       } catch {
         toast.error("Failed to place order. Please try again.");
@@ -336,6 +355,14 @@ export default function CartPage() {
                 </div>
 
                 <Separator />
+
+                {/* Delivery Estimate */}
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5 text-sm text-green-800">
+                  <Truck className="w-4 h-4 shrink-0 text-green-600" />
+                  <span className="font-medium">
+                    Estimated Delivery: {deliveryDateStr}
+                  </span>
+                </div>
 
                 {/* Payment Method Selection */}
                 <div>
