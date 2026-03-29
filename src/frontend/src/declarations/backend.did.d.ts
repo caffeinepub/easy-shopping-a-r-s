@@ -22,6 +22,15 @@ export interface CancelNotification {
   'createdAt' : bigint,
   'isRead' : boolean,
 }
+export interface ReturnNotification {
+  'id' : bigint,
+  'orderId' : bigint,
+  'buyerPrincipal' : string,
+  'reason' : string,
+  'createdAt' : bigint,
+  'isRead' : boolean,
+  'status' : string,
+}
 export interface Order {
   'id' : bigint,
   'status' : string,
@@ -111,6 +120,7 @@ export interface _SERVICE {
   'createProduct' : ActorMethod<[ProductInput], bigint>,
   'getActiveProducts' : ActorMethod<[], Array<Product>>,
   'getAdminCancelNotifications' : ActorMethod<[], Array<CancelNotification>>,
+  'getAdminReturnNotifications' : ActorMethod<[], Array<ReturnNotification>>,
   'getAllOrders' : ActorMethod<[], Array<Order>>,
   'getAllProductsAdmin' : ActorMethod<[], Array<Product>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -130,11 +140,14 @@ export interface _SERVICE {
   'getPaymentQRs' : ActorMethod<[], PaymentQRs>,
   'getProduct' : ActorMethod<[bigint], Product>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'handleReturnRequest' : ActorMethod<[bigint, boolean], undefined>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'loginAsAdmin' : ActorMethod<[string], boolean>,
   'markCancelNotificationRead' : ActorMethod<[bigint], undefined>,
+  'markReturnNotificationRead' : ActorMethod<[bigint], undefined>,
   'placeOrder' : ActorMethod<[string, string], bigint>,
   'removeCartItem' : ActorMethod<[bigint], undefined>,
+  'requestReturn' : ActorMethod<[bigint, string], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setPaymentQRs' : ActorMethod<[string, string], undefined>,
   'toggleProductActive' : ActorMethod<[bigint, boolean], undefined>,

@@ -60,6 +60,15 @@ export interface CancelNotification {
     createdAt: bigint;
     isRead: boolean;
 }
+export interface ReturnNotification {
+    id: bigint;
+    orderId: bigint;
+    buyerPrincipal: string;
+    reason: string;
+    createdAt: bigint;
+    isRead: boolean;
+    status: string;
+}
 export interface UserProfile {
     name: string;
     email: string;
@@ -83,6 +92,7 @@ export interface backendInterface {
     createProduct(newProduct: ProductInput): Promise<bigint>;
     getActiveProducts(): Promise<Array<Product>>;
     getAdminCancelNotifications(): Promise<Array<CancelNotification>>;
+    getAdminReturnNotifications(): Promise<Array<ReturnNotification>>;
     getAllOrders(): Promise<Array<Order>>;
     getAllProductsAdmin(): Promise<Array<Product>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -99,10 +109,13 @@ export interface backendInterface {
     getPaymentQRs(): Promise<PaymentQRs>;
     getProduct(productId: bigint): Promise<Product>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    handleReturnRequest(notifId: bigint, approved: boolean): Promise<void>;
     isCallerAdmin(): Promise<boolean>;
     markCancelNotificationRead(id: bigint): Promise<void>;
+    markReturnNotificationRead(id: bigint): Promise<void>;
     placeOrder(paymentMethod: string, paymentScreenshotId: string): Promise<bigint>;
     removeCartItem(productId: bigint): Promise<void>;
+    requestReturn(orderId: bigint, reason: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setPaymentQRs(esewaQrImageId: string, bankQrImageId: string): Promise<void>;
     toggleProductActive(id: bigint, isActive: boolean): Promise<void>;

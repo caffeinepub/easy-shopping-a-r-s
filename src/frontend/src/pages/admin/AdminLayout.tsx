@@ -16,14 +16,18 @@ import {
   LogOut,
   Menu,
   Package,
+  RotateCcw,
   ShoppingBag,
   X,
+  XCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { resetAdminActor } from "../../hooks/useAdminActor";
 import {
   useAdminCancelNotifications,
+  useAdminReturnNotifications,
   useMarkCancelNotificationRead,
+  useMarkReturnNotificationRead,
 } from "../../hooks/useQueries";
 
 const navItems = [
@@ -34,20 +38,22 @@ const navItems = [
 ];
 
 function NotificationBell() {
-  const { data: notifications = [] } = useAdminCancelNotifications();
-  const markRead = useMarkCancelNotificationRead();
+  const { data: cancelNotifications = [] } = useAdminCancelNotifications();
+  const { data: returnNotifications = [] } = useAdminReturnNotifications();
+  const markCancelRead = useMarkCancelNotificationRead();
+  const markReturnRead = useMarkReturnNotificationRead();
   const [open, setOpen] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const handleMarkRead = (id: bigint) => {
-    markRead.mutate(id);
-  };
+  const unreadCancelCount = cancelNotifications.filter((n) => !n.isRead).length;
+  const unreadReturnCount = returnNotifications.filter((n) => !n.isRead).length;
+  const unreadCount = unreadCancelCount + unreadReturnCount;
 
   const handleMarkAllRead = () => {
-    const unread = notifications.filter((n) => !n.isRead);
-    for (const n of unread) {
-      markRead.mutate(n.id);
+    for (const n of cancelNotifications.filter((n) => !n.isRead)) {
+      markCancelRead.mutate(n.id);
+    }
+    for (const n of returnNotifications.filter((n) => !n.isRead)) {
+      markReturnRead.mutate(n.id);
     }
   };
 
@@ -77,7 +83,7 @@ function NotificationBell() {
         align="end"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="font-semibold text-sm">Order Cancellations</h3>
+          <h3 className="font-semibold text-sm">Notifications</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -91,29 +97,36 @@ function NotificationBell() {
             </Button>
           )}
         </div>
-        <ScrollArea className="max-h-72">
-          {notifications.length === 0 ? (
+        <ScrollArea className="max-h-80">
+          {cancelNotifications.length === 0 &&
+          returnNotifications.length === 0 ? (
             <div
               data-ocid="admin.notification.empty_state"
               className="px-4 py-8 text-center text-sm text-muted-foreground"
             >
-              No cancellation notifications
+              No notifications
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {notifications.map((notif, idx) => {
+              {returnNotifications.map((notif, idx) => {
                 const date = new Date(Number(notif.createdAt) / 1_000_000);
                 return (
                   <div
-                    key={notif.id.toString()}
-                    data-ocid={`admin.notification.item.${idx + 1}`}
+                    key={`return-${notif.id.toString()}`}
+                    data-ocid={`admin.notification.return.${idx + 1}`}
                     className={`px-4 py-3 flex items-start justify-between gap-3 ${
                       notif.isRead ? "opacity-60" : "bg-orange-50/50"
                     }`}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        Order #{notif.orderId.toString()} cancelled
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <RotateCcw className="w-3.5 h-3.5 text-orange-500" />
+                        <p className="text-sm font-medium text-foreground">
+                          Return request: Order #{notif.orderId.toString()}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {notif.reason}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {date.toLocaleDateString("en-NP", {
@@ -127,8 +140,46 @@ function NotificationBell() {
                     {!notif.isRead && (
                       <button
                         type="button"
+                        onClick={() => markReturnRead.mutate(notif.id)}
+                        className="shrink-0 text-xs text-primary hover:underline mt-0.5"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {cancelNotifications.map((notif, idx) => {
+                const date = new Date(Number(notif.createdAt) / 1_000_000);
+                return (
+                  <div
+                    key={`cancel-${notif.id.toString()}`}
+                    data-ocid={`admin.notification.item.${idx + 1}`}
+                    className={`px-4 py-3 flex items-start justify-between gap-3 ${
+                      notif.isRead ? "opacity-60" : "bg-red-50/50"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <XCircle className="w-3.5 h-3.5 text-red-500" />
+                        <p className="text-sm font-medium text-foreground">
+                          Order #{notif.orderId.toString()} cancelled
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {date.toLocaleDateString("en-NP", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    {!notif.isRead && (
+                      <button
+                        type="button"
                         data-ocid={`admin.notification.toggle.${idx + 1}`}
-                        onClick={() => handleMarkRead(notif.id)}
+                        onClick={() => markCancelRead.mutate(notif.id)}
                         className="shrink-0 text-xs text-primary hover:underline mt-0.5"
                       >
                         Mark read

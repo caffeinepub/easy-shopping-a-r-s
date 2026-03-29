@@ -159,6 +159,15 @@ export interface CancelNotification {
     createdAt: bigint;
     isRead: boolean;
 }
+export interface ReturnNotification {
+    id: bigint;
+    orderId: bigint;
+    buyerPrincipal: string;
+    reason: string;
+    createdAt: bigint;
+    isRead: boolean;
+    status: string;
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
@@ -207,6 +216,10 @@ export interface backendInterface {
     updateOrderStatus(orderId: bigint, newStatus: string): Promise<void>;
     updateProduct(productUpdate: ProductUpdateInput): Promise<void>;
     updateProductStock(id: bigint, newQty: bigint): Promise<void>;
+    requestReturn(orderId: bigint, reason: string): Promise<void>;
+    getAdminReturnNotifications(): Promise<Array<ReturnNotification>>;
+    markReturnNotificationRead(id: bigint): Promise<void>;
+    handleReturnRequest(notifId: bigint, approved: boolean): Promise<void>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -592,6 +605,62 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.markCancelNotificationRead(arg0);
+            return result;
+        }
+    }
+    async requestReturn(arg0: bigint, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).requestReturn(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).requestReturn(arg0, arg1);
+            return result;
+        }
+    }
+    async getAdminReturnNotifications(): Promise<Array<ReturnNotification>> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).getAdminReturnNotifications();
+                return result as Array<ReturnNotification>;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).getAdminReturnNotifications();
+            return result as Array<ReturnNotification>;
+        }
+    }
+    async markReturnNotificationRead(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).markReturnNotificationRead(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).markReturnNotificationRead(arg0);
+            return result;
+        }
+    }
+    async handleReturnRequest(arg0: bigint, arg1: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).handleReturnRequest(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).handleReturnRequest(arg0, arg1);
             return result;
         }
     }

@@ -4,6 +4,7 @@ import type {
   CartItem,
   Order,
   Product,
+  ReturnNotification,
   UserProfile,
 } from "../backend";
 import { UserRole } from "../backend";
@@ -11,7 +12,14 @@ import { useActor } from "./useActor";
 import { getAdminActor } from "./useAdminActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
-export type { Product, CartItem, Order, UserProfile, CancelNotification };
+export type {
+  Product,
+  CartItem,
+  Order,
+  UserProfile,
+  CancelNotification,
+  ReturnNotification,
+};
 export { UserRole };
 
 // Extended profile type that includes phone (supported by backend but not in generated types)
@@ -244,6 +252,21 @@ export function useCancelOrder() {
   });
 }
 
+export function useRequestReturn() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      orderId,
+      reason,
+    }: { orderId: bigint; reason: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.requestReturn(orderId, reason);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myOrders"] }),
+  });
+}
+
 export function useAdminCancelNotifications() {
   return useQuery<CancelNotification[]>({
     queryKey: ["adminCancelNotifications"],
@@ -269,6 +292,51 @@ export function useMarkCancelNotificationRead() {
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["adminCancelNotifications"] }),
+  });
+}
+
+export function useAdminReturnNotifications() {
+  return useQuery<ReturnNotification[]>({
+    queryKey: ["adminReturnNotifications"],
+    queryFn: async () => {
+      try {
+        const actor = await getAdminActor();
+        const result = await (actor as any).getAdminReturnNotifications();
+        return (result ?? []) as ReturnNotification[];
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 30000,
+  });
+}
+
+export function useMarkReturnNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      const actor = await getAdminActor();
+      return (actor as any).markReturnNotificationRead(id);
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["adminReturnNotifications"] }),
+  });
+}
+
+export function useHandleReturnRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      notifId,
+      approved,
+    }: { notifId: bigint; approved: boolean }) => {
+      const actor = await getAdminActor();
+      return (actor as any).handleReturnRequest(notifId, approved);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminReturnNotifications"] });
+      qc.invalidateQueries({ queryKey: ["allOrders"] });
+    },
   });
 }
 

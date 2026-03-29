@@ -21,10 +21,10 @@ import {
   CheckCircle,
   Clock,
   CreditCard,
-  ImageIcon,
   MapPin,
   Package,
   Phone,
+  RotateCcw,
   ShoppingBag,
   Truck,
   User,
@@ -37,6 +37,7 @@ import { useActor } from "../../hooks/useActor";
 import {
   useAllOrders,
   useAllProductsAdmin,
+  useHandleReturnRequest,
   useUpdateOrderStatus,
 } from "../../hooks/useQueries";
 import type { Product } from "../../hooks/useQueries";
@@ -49,6 +50,9 @@ const ORDER_STATUSES = [
   "Shipped",
   "Delivered",
   "Cancelled",
+  "Return Requested",
+  "Return Approved",
+  "Return Rejected",
 ];
 
 const statusConfig: Record<
@@ -61,6 +65,12 @@ const statusConfig: Record<
   Shipped: { color: "bg-purple-100 text-purple-700", icon: Truck },
   Delivered: { color: "bg-green-100 text-green-700", icon: CheckCircle },
   Cancelled: { color: "bg-red-100 text-red-700", icon: XCircle },
+  "Return Requested": {
+    color: "bg-orange-100 text-orange-700",
+    icon: RotateCcw,
+  },
+  "Return Approved": { color: "bg-teal-100 text-teal-700", icon: CheckCircle },
+  "Return Rejected": { color: "bg-red-100 text-red-700", icon: XCircle },
 };
 
 const paymentMethodConfig: Record<
@@ -166,10 +176,44 @@ export default function AdminOrders() {
   const { data: orders, isLoading } = useAllOrders();
   const { data: allProducts } = useAllProductsAdmin();
   const updateStatus = useUpdateOrderStatus();
+  const handleReturn = useHandleReturnRequest();
   const [filterStatus, setFilterStatus] = useState("All");
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(
     null,
   );
+
+  // For matching return notifications to orders
+  const [returnNotifMap, setReturnNotifMap] = useState<
+    Record<string, { notifId: bigint; reason: string; status: string }>
+  >({});
+
+  // Load return notifications
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when orders change
+  useEffect(() => {
+    import("../../hooks/useAdminActor").then(({ getAdminActor }) => {
+      getAdminActor()
+        .then((actor: any) => {
+          actor
+            .getAdminReturnNotifications()
+            .then((notifs: any[]) => {
+              const map: Record<
+                string,
+                { notifId: bigint; reason: string; status: string }
+              > = {};
+              for (const n of notifs) {
+                map[n.orderId.toString()] = {
+                  notifId: n.id,
+                  reason: n.reason,
+                  status: n.status,
+                };
+              }
+              setReturnNotifMap(map);
+            })
+            .catch(() => {});
+        })
+        .catch(() => {});
+    });
+  }, [orders]);
 
   const productMap: Record<string, Product> = {};
   for (const p of allProducts ?? []) {
@@ -196,6 +240,31 @@ export default function AdminOrders() {
     }
   };
 
+  const handleReturnAction = async (notifId: bigint, approved: boolean) => {
+    try {
+      await handleReturn.mutateAsync({ notifId, approved });
+      toast.success(approved ? "Return approved" : "Return rejected");
+      // Refresh return notif map
+      const { getAdminActor } = await import("../../hooks/useAdminActor");
+      const actor: any = await getAdminActor();
+      const notifs = await actor.getAdminReturnNotifications();
+      const map: Record<
+        string,
+        { notifId: bigint; reason: string; status: string }
+      > = {};
+      for (const n of notifs) {
+        map[n.orderId.toString()] = {
+          notifId: n.id,
+          reason: n.reason,
+          status: n.status,
+        };
+      }
+      setReturnNotifMap(map);
+    } catch {
+      toast.error("Failed to process return request");
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="max-w-6xl mx-auto">
@@ -209,7 +278,7 @@ export default function AdminOrders() {
             </p>
           </div>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger data-ocid="admin.orders.select" className="w-40">
+            <SelectTrigger data-ocid="admin.orders.select" className="w-44">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -259,6 +328,8 @@ export default function AdminOrders() {
               const isOnlinePayment =
                 paymentMethod === "esewa" || paymentMethod === "bank";
               const isCOD = paymentMethod === "cod";
+              const isReturnRequested = order.status === "Return Requested";
+              const returnInfo = returnNotifMap[order.id.toString()];
 
               return (
                 <motion.div
@@ -308,7 +379,7 @@ export default function AdminOrders() {
                       >
                         <SelectTrigger
                           data-ocid={`admin.orders.select.${idx + 1}`}
-                          className="w-36 text-xs"
+                          className="w-40 text-xs"
                         >
                           <SelectValue />
                         </SelectTrigger>
@@ -373,7 +444,7 @@ export default function AdminOrders() {
                     )}
                   </div>
 
-                  {/* Ordered Items with product name + image */}
+                  {/* Ordered Items */}
                   <div className="mt-4 pt-3 border-t border-border">
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                       Ordered Items
@@ -464,7 +535,6 @@ export default function AdminOrders() {
                       )}
                     </div>
 
-                    {/* Confirm Action Buttons for Pending Orders */}
                     {isPending && isOnlinePayment && (
                       <div className="mt-3">
                         <Button
@@ -507,6 +577,55 @@ export default function AdminOrders() {
                       </div>
                     )}
                   </div>
+
+                  {/* Return Request Section */}
+                  {isReturnRequested && returnInfo && (
+                    <div className="mt-4 pt-3 border-t border-border">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+                        Return Request
+                      </p>
+                      <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                        <div className="flex items-start gap-2 mb-3">
+                          <RotateCcw className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-800">
+                              Return Reason:
+                            </p>
+                            <p className="text-sm text-orange-700 mt-0.5">
+                              {returnInfo.reason}
+                            </p>
+                          </div>
+                        </div>
+                        {returnInfo.status === "Pending" && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                              onClick={() =>
+                                handleReturnAction(returnInfo.notifId, true)
+                              }
+                              disabled={handleReturn.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Approve Return
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50 gap-2"
+                              onClick={() =>
+                                handleReturnAction(returnInfo.notifId, false)
+                              }
+                              disabled={handleReturn.isPending}
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Reject Return
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               );
             })}

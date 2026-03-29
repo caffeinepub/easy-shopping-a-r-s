@@ -11,7 +11,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -20,16 +28,22 @@ import {
   Clock,
   CreditCard,
   Package,
+  RotateCcw,
   ShoppingBag,
   Truck,
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
 import { toast } from "sonner";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useCancelOrder, useMyOrders } from "../hooks/useQueries";
+import {
+  useCancelOrder,
+  useMyOrders,
+  useRequestReturn,
+} from "../hooks/useQueries";
 
 const statusConfig: Record<
   string,
@@ -69,6 +83,21 @@ const statusConfig: Record<
     icon: XCircle,
     label: "Cancelled",
   },
+  "Return Requested": {
+    color: "bg-orange-100 text-orange-700",
+    icon: RotateCcw,
+    label: "Return Requested",
+  },
+  "Return Approved": {
+    color: "bg-teal-100 text-teal-700",
+    icon: CheckCircle,
+    label: "Return Approved",
+  },
+  "Return Rejected": {
+    color: "bg-red-100 text-red-700",
+    icon: XCircle,
+    label: "Return Rejected",
+  },
 };
 
 const paymentMethodLabels: Record<
@@ -87,6 +116,13 @@ export default function OrdersPage() {
   const { identity } = useInternetIdentity();
   const { data: orders, isLoading } = useMyOrders();
   const cancelOrder = useCancelOrder();
+  const requestReturn = useRequestReturn();
+
+  const [returnDialog, setReturnDialog] = useState<{ orderId: bigint } | null>(
+    null,
+  );
+  const [returnReason, setReturnReason] = useState("");
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   if (!identity) {
     navigate({ to: "/" });
@@ -104,6 +140,39 @@ export default function OrdersPage() {
     } catch {
       toast.error("Failed to cancel order");
     }
+  };
+
+  const handleReturnSubmit = async () => {
+    if (!returnDialog) return;
+    if (!returnReason.trim()) {
+      toast.error("Please provide a reason for the return");
+      return;
+    }
+    setSubmittingReturn(true);
+    try {
+      await requestReturn.mutateAsync({
+        orderId: returnDialog.orderId,
+        reason: returnReason.trim(),
+      });
+      toast.success("Return request submitted successfully");
+      setReturnDialog(null);
+      setReturnReason("");
+    } catch (e: any) {
+      toast.error(
+        e?.message?.includes("expired")
+          ? "Return window has expired (5 days after delivery)"
+          : "Failed to submit return request",
+      );
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
+  // Return window: within 5 days after estimated delivery (order + 5 days delivery + 5 days return = 10 days from order)
+  const isWithinReturnWindow = (createdAt: bigint) => {
+    const orderMs = Number(createdAt) / 1_000_000;
+    const returnDeadline = orderMs + 10 * 24 * 60 * 60 * 1000;
+    return Date.now() <= returnDeadline;
   };
 
   return (
@@ -147,12 +216,27 @@ export default function OrdersPage() {
                 Number(order.createdAt) / 1_000_000,
               );
               deliveryDate.setDate(deliveryDate.getDate() + 5);
+              const returnDeadline = new Date(
+                Number(order.createdAt) / 1_000_000,
+              );
+              returnDeadline.setDate(returnDeadline.getDate() + 10);
               const deliveryDateStr = deliveryDate.toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
               });
+              const returnDeadlineStr = returnDeadline.toLocaleDateString(
+                "en-US",
+                {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                },
+              );
               const canCancel = cancellableStatuses.has(order.status);
+              const canReturn =
+                order.status === "Delivered" &&
+                isWithinReturnWindow(order.createdAt);
               const paymentMethod =
                 ((order as any).paymentMethod as string) ?? "";
               const pmInfo = paymentMethodLabels[paymentMethod];
@@ -193,7 +277,7 @@ export default function OrdersPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <div className="text-right">
                         <div className="font-bold text-primary text-lg">
                           Rs. {Number(order.totalAmount).toLocaleString()}
@@ -240,6 +324,21 @@ export default function OrdersPage() {
                           </AlertDialogContent>
                         </AlertDialog>
                       )}
+                      {canReturn && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-ocid={`orders.return_button.${idx + 1}`}
+                          className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-300"
+                          onClick={() => {
+                            setReturnDialog({ orderId: order.id });
+                            setReturnReason("");
+                          }}
+                        >
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          Request Return
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -254,12 +353,54 @@ export default function OrdersPage() {
                     </div>
                   )}
 
+                  {/* Return status notices */}
+                  {order.status === "Return Requested" && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-orange-700 bg-orange-50 rounded-lg px-4 py-2.5">
+                      <RotateCcw className="w-4 h-4 shrink-0" />
+                      <span>
+                        Your return request has been submitted and is being
+                        reviewed.
+                      </span>
+                    </div>
+                  )}
+                  {order.status === "Return Approved" && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-teal-700 bg-teal-50 rounded-lg px-4 py-2.5">
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                      <span>
+                        Your return has been approved. Please follow the return
+                        instructions.
+                      </span>
+                    </div>
+                  )}
+                  {order.status === "Return Rejected" && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-red-700 bg-red-50 rounded-lg px-4 py-2.5">
+                      <XCircle className="w-4 h-4 shrink-0" />
+                      <span>
+                        Your return request was rejected. Please contact support
+                        for assistance.
+                      </span>
+                    </div>
+                  )}
+
                   {/* Delivery Estimate */}
                   {order.status !== "Cancelled" &&
-                    order.status !== "Delivered" && (
+                    order.status !== "Delivered" &&
+                    !order.status.startsWith("Return") && (
                       <div className="mt-2 flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-4 py-2.5">
                         <Truck className="w-4 h-4 shrink-0" />
                         <span>Estimated delivery: {deliveryDateStr}</span>
+                      </div>
+                    )}
+
+                  {/* Return window notice for delivered orders */}
+                  {order.status === "Delivered" &&
+                    isWithinReturnWindow(order.createdAt) && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-orange-600 bg-orange-50 rounded-lg px-4 py-2.5">
+                        <RotateCcw className="w-4 h-4 shrink-0" />
+                        <span>
+                          Return window open until {returnDeadlineStr}. You can
+                          return this order within 5 days of delivery.
+                        </span>
                       </div>
                     )}
 
@@ -283,6 +424,45 @@ export default function OrdersPage() {
         )}
       </main>
       <Footer />
+
+      {/* Return Request Dialog */}
+      <Dialog
+        open={!!returnDialog}
+        onOpenChange={(open) => !open && setReturnDialog(null)}
+      >
+        <DialogContent data-ocid="orders.return_dialog">
+          <DialogHeader>
+            <DialogTitle>Request Return</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Please provide a reason for returning Order #
+              {returnDialog?.orderId.toString()}. Returns must be requested
+              within 5 days of delivery.
+            </p>
+            <Textarea
+              placeholder="Describe why you want to return this item (e.g. wrong size, defective product, etc.)"
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReturnDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReturnSubmit}
+              disabled={submittingReturn || !returnReason.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              {submittingReturn ? "Submitting..." : "Submit Return Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -87,6 +87,15 @@ export const CancelNotification = IDL.Record({
   'createdAt' : IDL.Int,
   'isRead' : IDL.Bool,
 });
+export const ReturnNotification = IDL.Record({
+  'id' : IDL.Nat,
+  'orderId' : IDL.Nat,
+  'buyerPrincipal' : IDL.Text,
+  'reason' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'isRead' : IDL.Bool,
+  'status' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -127,6 +136,7 @@ export const idlService = IDL.Service({
     ),
   'getActiveProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
   'getAdminCancelNotifications' : IDL.Func([], [IDL.Vec(CancelNotification)], ['query']),
+  'getAdminReturnNotifications' : IDL.Func([], [IDL.Vec(ReturnNotification)], ['query']),
   'getAllOrders' : IDL.Func(
       [],
       [IDL.Vec(Order)],
@@ -161,11 +171,14 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'handleReturnRequest' : IDL.Func([IDL.Nat, IDL.Bool], [], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'loginAsAdmin' : IDL.Func([IDL.Text], [IDL.Bool], []),
   'markCancelNotificationRead' : IDL.Func([IDL.Nat], [], []),
+  'markReturnNotificationRead' : IDL.Func([IDL.Nat], [], []),
   'placeOrder' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
   'removeCartItem' : IDL.Func([IDL.Nat], [], []),
+  'requestReturn' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setPaymentQRs' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'toggleProductActive' : IDL.Func(
@@ -273,6 +286,15 @@ export const idlFactory = ({ IDL }) => {
     'createdAt' : IDL.Int,
     'isRead' : IDL.Bool,
   });
+  const ReturnNotification = IDL.Record({
+    'id' : IDL.Nat,
+    'orderId' : IDL.Nat,
+    'buyerPrincipal' : IDL.Text,
+    'reason' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'isRead' : IDL.Bool,
+    'status' : IDL.Text,
+  });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -313,6 +335,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getActiveProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
     'getAdminCancelNotifications' : IDL.Func([], [IDL.Vec(CancelNotification)], ['query']),
+    'getAdminReturnNotifications' : IDL.Func([], [IDL.Vec(ReturnNotification)], ['query']),
     'getAllOrders' : IDL.Func(
         [],
         [IDL.Vec(Order)],
@@ -347,11 +370,14 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'handleReturnRequest' : IDL.Func([IDL.Nat, IDL.Bool], [], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'loginAsAdmin' : IDL.Func([IDL.Text], [IDL.Bool], []),
     'markCancelNotificationRead' : IDL.Func([IDL.Nat], [], []),
+    'markReturnNotificationRead' : IDL.Func([IDL.Nat], [], []),
     'placeOrder' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
     'removeCartItem' : IDL.Func([IDL.Nat], [], []),
+    'requestReturn' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setPaymentQRs' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'toggleProductActive' : IDL.Func(

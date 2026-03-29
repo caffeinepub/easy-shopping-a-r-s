@@ -109,9 +109,20 @@ actor {
     isRead : Bool;
   };
 
+  public type ReturnNotification = {
+    id : Nat;
+    orderId : Nat;
+    buyerPrincipal : Text;
+    reason : Text;
+    createdAt : Int;
+    isRead : Bool;
+    status : Text;
+  };
+
   var nextProductId = 1;
   var nextOrderId = 1;
   var nextCancelNotifId = 1;
+  var nextReturnNotifId = 1;
   stable var paymentQRs : PaymentQRs = { esewaQrImageId = ""; bankQrImageId = "" };
 
   let products = Map.empty<Nat, Product>();
@@ -121,6 +132,7 @@ actor {
   let userProfiles = Map.empty<Principal, UserProfileV1>();
   let userProfilesV2 = Map.empty<Principal, UserProfile>();
   let cancelNotifications = Map.empty<Nat, CancelNotification>();
+  let returnNotifications = Map.empty<Nat, ReturnNotification>();
 
   system func postupgrade() {
     for (order in orders.values()) {
@@ -418,6 +430,69 @@ actor {
       case (null) {};
       case (?notif) {
         cancelNotifications.add(id, { notif with isRead = true });
+      };
+    };
+  };
+
+  // Return request: buyer can request return within 5 days of estimated delivery (10 days from order)
+  public shared ({ caller }) func requestReturn(orderId : Nat, reason : Text) : async () {
+    requireLoggedIn(caller);
+    let order = switch (ordersV2.get(orderId)) {
+      case (null) { Runtime.trap("Order not found") };
+      case (?ord) { ord };
+    };
+    if (order.buyerId != caller) {
+      Runtime.trap("You can only return your own orders");
+    };
+    if (order.status != "Delivered") {
+      Runtime.trap("Only delivered orders can be returned");
+    };
+    // 10 days = 5 days delivery + 5 days return window (in nanoseconds)
+    let tenDaysNs : Int = 10 * 24 * 60 * 60 * 1_000_000_000;
+    if (Time.now() - order.createdAt > tenDaysNs) {
+      Runtime.trap("Return window has expired (5 days after delivery)");
+    };
+    let updatedOrder : Order = { order with status = "Return Requested" };
+    ordersV2.add(orderId, updatedOrder);
+    let notif : ReturnNotification = {
+      id = nextReturnNotifId;
+      orderId;
+      buyerPrincipal = caller.toText();
+      reason;
+      createdAt = Time.now();
+      isRead = false;
+      status = "Pending";
+    };
+    returnNotifications.add(nextReturnNotifId, notif);
+    nextReturnNotifId += 1;
+  };
+
+  public query func getAdminReturnNotifications() : async [ReturnNotification] {
+    returnNotifications.values().toArray();
+  };
+
+  public shared func markReturnNotificationRead(id : Nat) : async () {
+    switch (returnNotifications.get(id)) {
+      case (null) {};
+      case (?notif) {
+        returnNotifications.add(id, { notif with isRead = true });
+      };
+    };
+  };
+
+  public shared func handleReturnRequest(notifId : Nat, approved : Bool) : async () {
+    switch (returnNotifications.get(notifId)) {
+      case (null) { Runtime.trap("Return notification not found") };
+      case (?notif) {
+        let newStatus = if (approved) { "Approved" } else { "Rejected" };
+        returnNotifications.add(notifId, { notif with status = newStatus; isRead = true });
+        let orderStatus = if (approved) { "Return Approved" } else { "Return Rejected" };
+        switch (ordersV2.get(notif.orderId)) {
+          case (null) {};
+          case (?order) {
+            ordersV2.add(notif.orderId, { order with status = orderStatus });
+          };
+        };
       };
     };
   };
